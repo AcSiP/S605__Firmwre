@@ -1,0 +1,127 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# Update configuration parameters
+
+eval `/mnt/skyeye/htdocs/proccgi $*`
+
+echo "Content-type: text/html"
+echo ""
+
+cat << EOF
+<!DOCTYPE html>
+<html>
+<head>
+	<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+	<script type="text/javascript">
+	//<![CDATA[
+		function sendUpdateCommand(plugin_name, param, value){
+			\$.ajax({
+				url: "/param.cgi",
+				type: "GET",
+				async: false,
+				data: {
+					action: "update",
+					group: "plugin",
+					name: plugin_name,
+					param: param,
+					value: value
+				}
+			});
+		}
+	//]]>
+	</script>
+EOF
+
+CONF_PATH="/mnt/skyeye/etc"
+
+if [ "$FORM_btnAction" == "Restore Default" ] ; then
+	DEF_CONF_PATH="$CONF_PATH"/factory/
+
+	case "$FORM_type" in
+	"plugin")
+		CONF_PATH=$CONF_PATH"/plugin"	
+		DEF_CONF_PATH=$DEF_CONF_PATH"/plugin"
+	;;
+	esac
+	
+	if [ -f "$DEF_CONF_PATH"/"$FORM_filename".conf ] ; then
+		# plugin is default enabled
+		cp "$DEF_CONF_PATH"/"$FORM_filename".conf "$CONF_PATH"
+	else
+		if [ -f "$DEF_CONF_PATH"/_"$FORM_filename".conf ] ; then
+			# plugin is default disabled
+			cp "$DEF_CONF_PATH"/_"$FORM_filename".conf "$CONF_PATH"
+		else
+cat << EOF
+			<script type="text/javascript">
+			//<![CDATA[
+			alert("Failed to load factory default!");
+			//]]>
+			</script>
+EOF
+		fi
+	fi
+else
+	case "$FORM_type" in
+	"plugin")
+		CONF_PATH=$CONF_PATH"/plugin"
+	;;
+	esac
+
+	CONF_FILE_PATH=$CONF_PATH"/"$FORM_filename".conf"
+
+	if [ ! -f "$CONF_FILE_PATH" ] ; then
+		CONF_FILE_PATH=$CONF_PATH"/_"$FORM_filename".conf"
+	fi
+
+	PARAM_NAME_LIST=`awk -F"[=#]" '!/^($|#)/{ print $1 }' "$CONF_FILE_PATH"`
+
+	for PARAM_NAME in $PARAM_NAME_LIST
+	do
+		ORIG_PARAM_VALUE=`awk -F"[=#]" '$1 ~ /'$PARAM_NAME'/{ print $2 }' "$CONF_FILE_PATH"`
+	
+		VAR_NAME="FORM_"$PARAM_NAME
+		eval NEW_PARAM_VALUE=\$$VAR_NAME
+	
+		if [ "$ORIG_PARAM_VALUE" != "$NEW_PARAM_VALUE" ] ; then
+			#sed -i "/$PARAM_NAME/s|$ORIG_PARAM_VALUE|$NEW_PARAM_VALUE|" "$CONF_FILE_PATH"
+cat << EOF
+	<script type="text/javascript">
+	//<![CDATA[
+	sendUpdateCommand('$FORM_filename', '$PARAM_NAME', '$NEW_PARAM_VALUE');
+	//]]>
+	</script>
+EOF
+		fi
+	done
+
+	if [ "$FORM_chkEnabled" == "1" ] ; then
+		if [ -f $CONF_FILE_PATH ] ; then
+			mv $CONF_FILE_PATH $CONF_PATH"/"$FORM_filename".conf"
+		fi
+	else
+		if [ -f $CONF_PATH"/"$FORM_filename".conf" ] ; then
+			mv $CONF_PATH"/"$FORM_filename".conf" $CONF_PATH"/_"$FORM_filename".conf"
+		fi
+	fi
+fi
+
+sync
+
+if [ "$FORM_filename" == "msloader" ] ; then
+	URL_PARAM="type=loader"
+else
+	URL_PARAM="type=plugin&name="$FORM_filename
+fi
+
+cat << EOF
+	<script type="text/javascript">
+	//<![CDATA[
+	window.location.href = "list.ncgi?$URL_PARAM";
+	//]]>
+	</script>
+</head>
+</html>
+EOF

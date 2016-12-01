@@ -1,0 +1,476 @@
+<!DOCTYPE>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton SkyEye Demo Page</title>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet" />
+		<link type="text/css" href="skin/blue.monday/jplayer.blue.monday.css" rel="stylesheet" />
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+		<script type="text/javascript" src="js/jquery.jplayer.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		<style>
+		.ui-widget-content { background: none repeat scroll 0 0 gray; border: 2px solid white; }
+		#sliderPos .ui-slider-handle { background: #E0E0E0; border: 2px solid red; }
+		</style>
+		<script type="text/javascript">
+		//<![CDATA[
+			var loaded_time		= new Date();
+			var identify_key	= loaded_time.getTime() % 1000000000;
+			var varFileID		= 0;
+			var varTotalDuration	= 0;
+			var bPauseUpdate	= false;
+			
+			$.extend({
+				getUrlVars: function(){
+					var vars = [], hash;
+					var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+					for(var i = 0; i < hashes.length; i++)
+					{
+						hash = hashes[i].split('=');
+						vars.push(hash[0]);
+						vars[hash[0]] = hash[1];
+					}
+					return vars;
+				},
+				getUrlVar: function(name){
+					return $.getUrlVars()[name];
+				}
+			});
+			
+			function disableCtrlButton(varDisable)
+			{
+				$("#btnPause").prop("disabled", varDisable);
+				$("#btnStop").prop("disabled", varDisable);
+			}
+			
+			function setFileID(varID)
+			{
+				varFileID = varID;
+				console.log("Set File ID: ", varFileID);
+			}
+			
+			function updateFileCurrTime()
+			{
+				$.get("/server.command?command=get_avi_status&value=12")
+				.done(function(data){
+					if(bPauseUpdate || data.value <= 0)
+						return ;
+				
+					varTotalDuration = data.value;
+					$("#spanTotalDuration").html(varTotalDuration.toHHMMSS());
+					
+					$.get("/server.command?command=get_avi_status&value=13")
+					.done(function(data){
+						if(data.value > 0)
+						{
+							$("#sliderPos").slider("value", Math.floor((data.value * 100) / varTotalDuration));
+							$("#spanPos").html(data.value.toHHMMSS());
+						}
+					});
+					
+					setTimeout("updateFileCurrTime()", 1000);
+				});
+			}
+			
+			function getPlaySpeed()
+			{
+				$.get("/server.command?command=get_avi_status&value=14")
+				.done(function(data){
+					if(data.value > 0)
+					{
+						varPlaySpeedM = data.value;
+						
+						$.get("/server.command?command=get_avi_status&value=15")
+						.done(function(data){
+							if(data.value > 0)
+							{
+								varPlaySpeedN = data.value;
+								
+								switch(varPlaySpeedM / varPlaySpeedN)
+								{
+								case 0.25:
+									$("#radPlaySpeed_0_25").prop("checked", true);
+									break;
+								case 0.5:
+									$("#radPlaySpeed_0_5").prop("checked", true);
+									break;
+								case 1:
+									$("#radPlaySpeed_1").prop("checked", true);
+									break;
+								case 2:
+									$("#radPlaySpeed_2").prop("checked", true);
+									break;
+								case 4:
+									$("#radPlaySpeed_4").prop("checked", true);
+									break;
+								}
+							}
+						});
+					}
+				});
+			}
+			
+			function setPlaySpeed()
+			{
+				varNewPlaySpeed = $("input:radio[name=PlaySpeed]:checked").val();
+				
+				switch(varNewPlaySpeed)
+				{
+					case "0.25":
+						varNewPlaySpeedM = 1;
+						varNewPlaySpeedN = 4;
+						break;
+					case "0.5":
+						varNewPlaySpeedM = 1;
+						varNewPlaySpeedN = 2;
+						break;
+					case "1":
+						varNewPlaySpeedM = 1;
+						varNewPlaySpeedN = 1;
+						break;
+					case "2":
+						varNewPlaySpeedM = 2;
+						varNewPlaySpeedN = 1;
+						break;
+					case "4":
+						varNewPlaySpeedM = 4;
+						varNewPlaySpeedN = 1;
+						break;
+				}
+				$.get("/server.command?command=set_play_speed&value=" + varNewPlaySpeedM + "&level=" + varNewPlaySpeedN);
+			}
+			
+			$(function(){
+				$("#sliderPos").slider({
+					value: 0,
+					min: 0,
+					max: 100,
+					stop: function(event, ui){
+						if(varTotalDuration > 0)
+						{
+							$("#sliderPos").slider("option", "disabled", true);
+							
+							bPauseUpdate = true;
+							varSeekPos = (ui.value * varTotalDuration) / 100;
+							
+							if(varSeekPos < varTotalDuration)
+							{
+								$.get("/server.command?command=seek_avi&value=" + Math.floor(varSeekPos))
+								.done(function(){
+									bPauseUpdate = false;
+									updateFileCurrTime();
+									$("#sliderPos").slider("option", "disabled", false);
+								});
+							}
+						}
+					}
+				});
+			});
+			
+			$(document).ready(function(e)
+			{
+				var varFilePath = $.getUrlVar("filepath");
+				
+				$("#jplayer_status").val("Loading...");
+				
+				$("#jplayer_status").click(function() {
+					if($("#jplayer_status").val() != "Disable")
+					{
+						$("#jquery_jplayer").jPlayer("play");
+						$("#jplayer_status").val("Loading...");
+						$("#jplayer_status").prop("disabled", true);
+					}
+					else
+					{
+						$("#jquery_jplayer").jPlayer("stop");
+						$("#jplayer_status").val("Enable");
+					}
+				});
+				
+				$("#radPlaySpeed_0_25, #radPlaySpeed_0_5, #radPlaySpeed_1, #radPlaySpeed_2, #radPlaySpeed_4").click(setPlaySpeed);
+				
+				$.get("/server.command?command=check_storage", function(data){
+					if(data.value == 0)
+						alert("No external storage");
+					else
+					{
+						if(varFilePath == null)
+						{
+							alert("Not a valid file path!");
+						}
+						else
+						{
+							varFileExt = varFilePath.split('.').pop();
+							
+							if(varFileExt == "avi")
+							{
+								$("#jp_container_1").hide();
+								
+								$.get("/server.command?command=open_avi&value=" + varFilePath, function(){
+									disableCtrlButton(true);
+								}).done(function(data){
+									if(data.value < 0)
+										alert("Nuvoton Player encountered a problem while playing the file. Maybe file is broken or unrecognized format, please try to view it on PC.");
+									else
+									{
+										console.log("open_avi return " + data.value);
+										setFileID(data.value);
+										
+										$("#tagAVIFileName").text("[ " + varFilePath + " ]");
+										$("#imgVideo").prop("src", "/video.cgi?from_file=1&identify_key=" + identify_key);
+										$("#imgVideo").show();
+										$("#tblLayout").show();
+										getPlaySpeed();
+										
+										// Instance jPlayer
+										$("#jquery_jplayer").jPlayer({
+											ready: function(event) {
+												$(this).jPlayer("setMedia", {
+													mp3: "/server.audio?kbsize=102400&from_file=1&unique=" + new Date().getTime()
+												});
+												
+												$("#jplayer_status").val("Loading...");
+												
+												if(event.jPlayer.html.used && event.jPlayer.html.audio.available)
+												{
+													$("#jplayer_applied_solution").text("[Audio: HTML5 is applied]");
+													
+													if($.jPlayer.platform.iphone || $.jPlayer.platform.ipad || $.jPlayer.platform.android)
+													{
+														$("#jplayer_status").show();
+														$("#jplayer_status").val("Enable");
+														$("#jplayer_status").prop("disabled", false);
+													}
+												}
+												else
+												{
+													$("#jplayer_applied_solution").text("[Audio: FLASH is applied]");
+													$("#jplayer_status").trigger("click");
+												}
+											},
+											loadstart: function(event) {
+												jplayer_loadstart_time = new Date();
+												console.log("loadstart: " + (jplayer_loadstart_time - loaded_time));
+											},
+											play: function(event) {
+												$("#jplayer_status").show();
+												$("#jplayer_status").val("Disable");
+												$("#jplayer_status").prop("disabled", false);
+											},
+											canplaythrough: function(event) {
+												var curr_time = new Date();
+												//console.log((curr_time - jplayer_loadstart_time) / 1000);
+												//alert("Time passed: " + (curr_time - loaded_time));
+											},
+											loadedmetadata: function() {
+												console.log("loadedmetadata: " + (new Date() - jplayer_loadstart_time));
+												if(!$.jPlayer.platform.mobile)
+													$(this).jPlayer("play", 1);
+												if(!$.jPlayer.platform.iphone && !$.jPlayer.platform.ipad)
+												{
+													$("#jplayer_status").trigger("click");
+												}
+											},
+											ended: function() {
+												$("#jplayer_status").val("Stop");
+											},
+											solution: "html, flash",
+											supplied: "mp3",
+											wmode: "window"
+										});
+										
+										disableCtrlButton(false);
+									}
+									
+									updateFileCurrTime();
+								});	// open_avi
+								
+								$("#jpCtrlUI").hide();
+							}	// avi file
+							else if(varFileExt == "mp4")
+							{
+								$("#tagMP4FileName").text(varFilePath);
+								$("#jquery_jplayer").jPlayer({
+									ready: function(event) {
+										$(this).jPlayer("setMedia", {
+											m4v: "/link//mnt/rec_folder/" + varFilePath
+										}).jPlayer("play");
+										
+										$("#jplayer_status").val("Loading...");
+									},
+									solution: "html, flash",
+									size: {
+										width: "640px",
+										height: "480px"
+									},
+									supplied: "m4v",
+									wmode: "window"
+								});
+								
+								disableCtrlButton(false);
+								$("#jpCtrlUI").show();
+								$("#jp_container_1").show();
+							}	// mp4 file
+							else if(varFileExt == "jpg")
+							{
+								$("#imgStatic").prop("src", "/link//mnt/rec_folder/" + varFilePath);
+								$("#imgStatic").show();
+							}
+						}
+					}
+				});
+				
+				$("#btnPause").click(function(){
+					if($("#btnPause").val() == "Pause")
+					{
+						$.get("/server.command?command=pause_avi", function(){
+							disableCtrlButton(true);
+						}).done(function(){
+							$("#btnPause").val("Resume");
+							disableCtrlButton(false);
+							bPauseUpdate = true;
+						})
+						.fail(function(){
+							disableCtrlButton(false);
+						});
+					}
+					else
+					{
+						$.get("/server.command?command=resume_avi", function(){
+							disableCtrlButton(true);
+						}).done(function(){
+							$("#btnPause").val("Pause");
+							disableCtrlButton(false);
+							
+							bPauseUpdate = false;
+							updateFileCurrTime();
+						})
+						.fail(function(){
+							disableCtrlButton(false);
+						});
+					}
+					
+					getPlaySpeed();
+				});
+				
+				$("#btnStop").click(function(){
+					if($("#btnStop").val() == "Stop")
+					{
+						$.get("/server.command?command=close_avi&value=" + varFileID, function(){
+							disableCtrlButton(true);
+						}).done(function(data){
+							$("#btnStop").val("Play");
+							$("#imgVideo").hide();
+							$("#jquery_jplayer").jPlayer("stop");
+							$("#jp_container_1").hide();
+							setFileID(0);
+							disableCtrlButton(false);
+							
+							bPauseUpdate = true;
+							$("#spanPos").html("N/A");
+							$("#spanTotalDuration").html("N/A");
+							$("#sliderPos").slider("value", 0);
+						}).fail(function(data){
+							disableCtrlButton(false);
+						});
+					}
+					else
+					{
+						window.location.reload();
+					}
+				});
+			});
+		//]]>
+		</script>
+	</head>
+	<body>
+		<table id="tblLayout" style="display: none;" bgcolor="#000000">
+			<tr>
+				<td colspan="2"><hr></td>
+			</tr>
+			<tr>
+				<td colspan="2" align="center"><img id="imgVideo" src="#" alt="If browser failed to display this image. Please notice that IE, Opera, and Android browsers do not support motion JPEG format stream. You could try another solution by clicking JPEG.MP3 Stream link." /></td>
+			</tr>
+			<tr>
+				<td colspan="2">
+					<div id="sliderPos"></div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<input id="btnPause" type="button" value="Pause" />
+					<input id="btnStop" type="button" value="Stop" />
+				</td>
+				<td align="right" style="color: white;">
+					<span id="tagAVIFileName"></span> [ <span id="spanPos">N/A</span> / <span id="spanTotalDuration">N/A</span> ]
+				</td>
+			</tr>
+			<tr><td colspan="2"><hr></td></tr>
+			<tr style="color: white;">
+				<td>
+					Play Speed
+					<input type="radio" id="radPlaySpeed_0_25" name="PlaySpeed" value="0.25">0.25x</input>
+					<input type="radio" id="radPlaySpeed_0_5" name="PlaySpeed" value="0.5">0.5x</input>
+					<input type="radio" id="radPlaySpeed_1" name="PlaySpeed" value="1">1x</input>
+					<input type="radio" id="radPlaySpeed_2" name="PlaySpeed" value="2">2x</input>
+					<input type="radio" id="radPlaySpeed_4" name="PlaySpeed" value="4">4x</input>
+				</td>
+				<td align="right">
+					<span id="jplayer_applied_solution"></span>
+					<input type="button" id="jplayer_status" disabled style="display: none;" />
+				</td>
+			</tr>
+		</table>
+		<div id="jp_container_1" class="jp-video jp-video-360p" style="display: none;">
+		<div class="jp-type-single">
+			<div id="jquery_jplayer" class="jp-jplayer"></div>
+			<div id="jpCtrlUI" style="display: none;">
+			<div class="jp-gui">
+				<div class="jp-video-play">
+					<a href="javascript:;" class="jp-video-play-icon" tabindex="1">play</a>
+				</div>
+				<div class="jp-interface">
+					<div class="jp-progress">
+						<div class="jp-seek-bar">
+							<div class="jp-play-bar"></div>
+						</div>
+					</div>
+					<div class="jp-current-time"></div>
+					<div class="jp-duration"></div>
+					<div class="jp-controls-holder">
+						<ul class="jp-controls">
+							<li><a href="javascript:;" class="jp-play" tabindex="1">play</a></li>
+							<li><a href="javascript:;" class="jp-pause" tabindex="1">pause</a></li>
+							<li><a href="javascript:;" class="jp-stop" tabindex="1">stop</a></li>
+							<li><a href="javascript:;" class="jp-mute" tabindex="1" title="mute">mute</a></li>
+							<li><a href="javascript:;" class="jp-unmute" tabindex="1" title="unmute">unmute</a></li>
+							<li><a href="javascript:;" class="jp-volume-max" tabindex="1" title="max volume">max volume</a></li>
+						</ul>
+						<div class="jp-volume-bar">
+							<div class="jp-volume-bar-value"></div>
+						</div>
+						<ul class="jp-toggles">
+							<li><a href="javascript:;" class="jp-full-screen" tabindex="1" title="full screen">full screen</a></li>
+							<li><a href="javascript:;" class="jp-restore-screen" tabindex="1" title="restore screen">restore screen</a></li>
+							<li><a href="javascript:;" class="jp-repeat" tabindex="1" title="repeat">repeat</a></li>
+							<li><a href="javascript:;" class="jp-repeat-off" tabindex="1" title="repeat off">repeat off</a></li>
+						</ul>
+					</div>
+					<div class="jp-title">
+						<ul>
+							<li><span id="tagMP4FileName"></span></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+			</div>
+		</div>
+		</div>
+		<img id="imgStatic" style="display: none;" />
+	</body>
+</html>

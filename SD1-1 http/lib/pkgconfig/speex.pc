@@ -1,0 +1,15 @@
+# libspeex pkg-config source file
+
+prefix=/home/px30/daily_build/SKYEYE_PRJ/SkyEye_svn/PRJ/packages/SkyEye/output//.install/S605_32_2.6.35.4
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: speex
+Description: Speex is an audio codec tuned for speech
+Version: 1.2rc1
+Requires:
+Conflicts:
+Libs: -L${libdir} -lspeex
+Libs.private: -lm
+Cflags: -I${includedir}

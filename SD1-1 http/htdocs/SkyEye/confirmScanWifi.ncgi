@@ -1,0 +1,58 @@
+#!/bin/sh
+
+WIFI_LIST_PATH="/tmp/wifi_list"
+
+if [ -f "$WIFI_LIST_PATH" ] ; then
+	rm "$WIFI_LIST_PATH"
+fi
+
+echo "Content-type: text/html"
+echo ""
+
+cat << EOF
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet">
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+
+		<script type="text/javascript">
+		\$(document).ready(function(e){
+			if(confirm("Would you like to scan Wi-Fi network nearby SkyEye device?"))
+			{
+				\$("#InfoDialog").html("<p>Please wait few seconds to scan network</p>");
+				\$("#InfoDialog").dialog({
+					title: "Scanning",
+					modal: true
+				});
+				
+				\$.get("scanWiFi.ncgi")
+				.done(function(data){
+					\$("#InfoDialog").dialog("close");
+					window.location.href = "server_network_config.ncgi";
+				})
+				.fail(function(xhr){
+					\$("#InfoDialog").html("Failed to scan! Please try to refresh this page later.");
+					window.location.href = "server_network_config.ncgi";
+				});
+			}
+			else
+				window.location.href = "server_network_config.ncgi";
+		});
+		</script>
+	</head>
+	<body>
+		<table width="320" height="240">
+		<tr><td>
+		<div id="InfoDialog"></div>
+		</td></tr>
+		</table>
+	</body>
+</html>
+EOF

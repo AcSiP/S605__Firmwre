@@ -1,0 +1,290 @@
+<!--Force IE6 into quirks mode with this comment tag-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton SkyEye Demo</title>
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link rel="stylesheet" type="text/css" href="css-frames-style.css" />
+		<!--For versions below Internet Explorer 7-->
+		<!--[if lt IE 7]>
+		<link rel="stylesheet" href="css-frames-style-unreal.css" type="text/css">
+		<![endif]-->
+		<script type="text/javascript">
+		//<![CDATA[
+		function video_auto_detect()
+		{
+			if($.browser.msie || $.browser.opera || ($.browser.android && !$.browser.mozilla))
+			{
+				$("#server_video").prop("src", "server_video_jpg.html?pipe=0");
+				$("#selVideo").val("jpeg_continuous");
+			}
+			else
+			{
+				$("#server_video").prop("src", "server_video_mjpg.html?pipe=0");
+				$("#selVideo").val("motion_jpeg_html");
+			}
+		}
+		
+		function audio_auto_detect()
+		{
+			$("#server_audio").prop("src", "server_audio_mp3.html?solution=html");
+			$("#selAudio").val("mp3_html5");
+		}
+		
+		$.extend({
+			getUrlVars: function(){
+				var vars = [], hash;
+				var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+				for(var i = 0; i < hashes.length; i++)
+				{
+					hash = hashes[i].split('=');
+					vars.push(hash[0]);
+					vars[hash[0]] = hash[1];
+				}
+				return vars;
+			},
+			getUrlVar: function(name){
+				return $.getUrlVars()[name];
+			}
+		});
+				
+		function changeView(event)
+		{
+			$("#trVideo").hide();
+			$("#trAudio").hide();
+			$("#server_video").prop("src", event.data.newSrc);
+			$("#server_audio").prop("src", "");
+			
+			curFocus.removeClass("focus");
+			curFocus = $(event.target);
+			curFocus.addClass("focus");
+		}
+		
+		function reinitIFrame(varTargetFrame)
+		{
+			var innerDoc = (varTargetFrame.get(0).contentDocument) ? varTargetFrame.get(0).contentDocument.documentElement : varTargetFrame.get(0).contentWindow.document.body;
+			
+			if(innerDoc)
+			{
+				varTargetFrame.width(innerDoc.scrollWidth);
+				varTargetFrame.height(innerDoc.scrollHeight);
+			}
+			
+			setTimeout(
+				function(){
+					reinitIFrame(varTargetFrame);
+				}, 
+				3000
+			);
+		}
+		
+		verifiedUser = verifyUser();
+		
+		if(verifiedUser == "")
+			window.top.location.href = "/";
+		
+		function queryPipeCnt(tagPipeCnt)
+		{
+			$.get("/server.command?command=get_pipe_cnt&type=jpeg")
+			.done(function(data){
+				if(data.value > 0 && tagPipeCnt != null)
+				{
+					var tagElem = document.getElementById(tagPipeCnt);
+					
+					var tagHTML	= "";
+					
+					tagElem.innerHTML = tagHTML;
+					tagHTML = '<select id="pipe_id">';
+					
+					for(i = 0; i < data.value; i++)
+						tagHTML += '<option value="' + i + '">Pipe_' + i + '</option>';
+					
+					tagHTML += '</select>';
+					tagElem.innerHTML = tagHTML;
+				}
+			});
+		}
+		
+		$(document).ready(function(e){
+			_setBrowser();
+			
+			queryPipeCnt("jpeg_pipe");
+			$("#jpeg_pipe").change(function(){
+				$("#selVideo").trigger("change");
+			});
+			
+			if(verifiedUser == "view")
+			{
+				$("#network_config").hide();
+				$("#firmware_update").hide();
+				$("#alarm_config").hide();
+				$("#server_config").hide();
+			}
+			
+			$("#rtmp_view").hide();
+			
+			if($.browser.mobile)
+			{
+				$("#rtsp_view").hide();
+			}
+			else
+			{
+				$.get("/SkyEye/checkFileExist.ncgi?filePath=/mnt/skyeye/etc/crtmpserver.lua", function(data){
+					if(data.value > 0)
+						$("#rtmp_view").show();
+				});
+			}
+			
+			$("#multicast_view").hide();
+			
+			$.get("./ctrlIPChk.ncgi", function(data){
+				if(data == 1)
+					$("#multicast_view").show();
+			});
+			
+			curFocus = $("#dual_stream");
+			video_auto_detect();
+			audio_auto_detect();
+			
+			$("#selVideo").change(function(){
+				switch($("#selVideo").val())
+				{
+				case "motion_jpeg_html":
+					$("#server_video").prop("src", "server_video_mjpg.html?pipe=" + $("#pipe_id").val());
+					break;
+				case "motion_jpeg_java":
+					$("#server_video").prop("src", "server_video_mjpg_java.html?pipe=" + $("#pipe_id").val());
+					break;
+				case "jpeg_continuous":
+					$("#server_video").prop("src", "server_video_jpg.html?solution=continuous&pipe=" + $("#pipe_id").val());
+					break;
+				case "jpeg_snapshot":
+					$("#server_video").prop("src", "server_video_jpg.html?solution=snapshot&pipe=" + $("#pipe_id").val());
+					break;
+				case "disable":
+					$("#server_video").prop("src", "");
+					break;
+				default:
+					video_auto_detect();
+					break;
+				}
+			});
+			
+			$("#selAudio").change(function(){
+				switch($("#selAudio").val())
+				{
+				case "mp3_html5":
+					$("#server_audio").prop("src", "server_audio_mp3.html?solution=html");
+					break;
+				case "mp3_flash":
+					$("#server_audio").prop("src", "server_audio_mp3.html?solution=flash");
+					break;
+				case "mp3_java":
+					$("#server_audio").prop("src", "server_audio_mp3_java.html");
+					break;
+				case "disable":
+					$("#server_audio").prop("src", "");
+					break;
+				default:
+					audio_auto_detect();
+					break;
+				}	
+			});
+			
+			$("#rtsp_view").click({newSrc: "server_rtsp.html"}, changeView);
+			$("#rtmp_view").click({newSrc: "server_rtmp.html"}, changeView);
+			$("#network_config").click({newSrc: "confirmScanWifi.ncgi"}, changeView);
+			$("#alarm_config").click({newSrc: "server_alarm_config.html"}, changeView);
+			$("#server_config").click({newSrc: "server_config.html"}, changeView);
+			$("#firmware_update").click({newSrc: "server_file.html"}, changeView);
+			$("#about_skyeye").click({newSrc: "/version.txt"}, changeView);
+			
+			$("#server_video").load(
+				function(){
+					reinitIFrame($("#server_video"));
+					reinitIFrame($("#server_audio"));
+				}
+			);
+		});
+		//]]>
+		</script>
+	
+	</head>
+
+	<body>
+	<div id="Config"></div>
+	<div id="framecontent">
+	<div class="innertube">
+
+		<table>
+			<tr><td><a id="single_stream" href="menu.html">[Merged A/V Stream]</a></td></td></tr>
+			<tr><td><a id="dual_stream" href="menu_dual_stream.html" class="focus">[Separate A/V Stream]</a></td></tr>
+			<tr id="trVideo">
+				<td>
+					Video-<span id="jpeg_pipe"></span><br>
+					<select id="selVideo">
+					<option value="motion_jpeg_html">Motion JPEG-HTML</option>
+					<option value="motion_jpeg_java">Motion JPEG-JAVA</option>
+					<option value="jpeg_continuous">JPEG-Continuous</option>
+					<option value="jpeg_snapshot">JPEG-Snapshot</option>
+					<option value="auto_detect" selected>Auto-Detect</option>
+					<option value="disable">Disabled</option>
+					</select>
+				</td>
+			</tr>
+			<tr id="trAudio">
+				<td>
+					Audio-<br>
+					<select id="selAudio">
+					<option value="mp3_html5">MP3-HTML5</option>
+					<option value="mp3_flash">MP3-FLASH</option>
+					<option value="mp3_java">MP3-JAVA</option>
+					<option value="auto_detect" selected>Auto-Detect</option>
+					<option value="disable">Disabled</option>
+					</select>
+				</td>
+			</tr>
+			<tr><td><a id="rtsp_view" href="#">[RTSP Viewer]</a></td></tr>
+			<tr><td><a id="rtmp_view" href="#">[RTMP Viewer]</a></td></tr>
+			<tr><td><a id="network_config" href="#">[Network Config]</a></td></tr>
+			<tr><td><a id="alarm_config" href="#">[Alarm Config]</a></td></tr>
+			<tr><td><a id="server_config" href="#">[Server Config]</a></td></tr>
+			<tr><td><a id="firmware_update" href="#">[Firmware Update]</a></td></tr>
+			<tr><td><a id="multicast_view" href="menu_multicast.html">[Multicast View]</a></td></tr>
+			<tr><td><a id="about_skyeye" href="#">[About SkyEye]</a></td></tr>
+			<tr>
+				<td>
+					<hr>
+					<a href="http://www.nuvoton.com" target="_blank"><img src="../img/nuvoton.png" style="border:none;" /></a>
+					<a href="/">.</a>
+				</td>
+			</tr>
+		</table>
+
+	</div>
+	</div>
+	
+	
+	<div id="maincontent">
+	<div class="innertube">	
+		<table>
+			<tr>
+				<td><iframe id="server_video" frameborder="0" width="640" height="480">Your browser does not support iframe tag.</iframe></td>
+			</tr>
+			<tr>
+				<td><iframe id="server_audio" name="server_audio" frameborder="0" width="300" height="80">Your browser does not support iframe tag.</iframe></td>
+			</tr>
+		</table>
+	</div>
+	</div>
+	
+	
+	</body>
+</html>

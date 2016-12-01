@@ -1,0 +1,26 @@
+<html>
+	<head>
+		<script language="JavaScript">
+			<!--
+			function createCookie(name, value, days) {
+				if(days)
+				{
+					var date = new Date();
+					date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+					var expires = "; expires=" + date.toGMTString();
+				}
+				else var expires = "";
+				document.cookie = name + "=" + value + expires + "; path=/";
+			}
+			
+			window.onload = function()
+			{
+				createCookie("verified_url", "true", 1);
+				createCookie("skyeye_host", "http://" + window.location.host, 1);
+				window.location.href = "/SkyEye/";
+			}
+		</script>
+	</head>
+	<body>
+	</body>
+</html>

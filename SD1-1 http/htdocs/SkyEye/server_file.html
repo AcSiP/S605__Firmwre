@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton SkyEye Firmware Page</title>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		
+		<script type="text/javascript">
+		//<![CDATA[
+		verifiedUser = verifyUser();
+		
+		if(verifiedUser == "")
+			window.top.location.href = "/";
+		
+		function checkLock()
+		{
+			$.ajax({
+				url: "checkFileExist.ncgi",
+				type: "GET",
+				data : {
+					filePath: "/tmp/skyeye.lock"
+				},
+				async: false,
+				dataType: "json",
+				error: function(xhr) {
+					alert("Please refresh manually later!");
+				},
+				success: function(data) {
+					if(data.value == "1")
+					{
+						$("#divUpdateFW").hide();
+						$("#divBackupFW").hide();
+						$("#InfoText").html("Firmware update or backup is in progress. Please try to re-connect later.");
+					}
+				}
+			});
+		}
+		
+		function checkFile()
+		{
+			var input, file;
+			
+			if($("#firmware").val() == "")
+			{
+				alert("Please browse desired firmware to update!");
+				return false;
+			}
+
+			if (typeof window.FileReader !== 'function') {
+				$("#InfoText").html("The file API isn't supported on this browser yet.");
+				return true;
+			}
+
+			input = document.getElementById('firmware');
+			
+			if (!input || !input.files) {
+				$("#InfoText").html("This browser doesn't seem to support upload file size checking.");
+				return true;
+			}
+			else if (!input.files[0]) {
+				alert("Please select a file before clicking 'Update'");
+			}
+			else {
+				file = input.files[0];
+				
+				if(file.size <= (8 * 1024 * 1024))
+					return true;
+				
+				alert("File " + file.name + " is " + file.size + " bytes exceeds firmware limitation!\nPlease select a correct one!");
+			}
+			return false;
+		}
+		
+		$(document).ready(function(e){
+			checkLock();
+			
+			$("#firmware").change(function(){
+				if($("#firmware").val() != "")
+				{
+					$("#btnUpdateFW").prop("disabled", false);
+				}
+				else
+				{
+					$("#btnUpdateFW").prop("disabled", true);
+				}
+			});
+			
+			$("#btnUpdateFW").click(function(){
+				if(checkFile() == true)
+				{
+					$("#InfoText").html("Please wait SkyEye to update firmware and it would take about 5 minutes.");
+					setTimeout("window.top.location.href = \"/\";", 300000);
+					$("#frmUpdateFW").submit();
+				}
+				else
+				{
+					$("#firmware").val("");
+				}
+			});
+			
+			$("#aBackuoFW").hide();
+			
+			$("#btnBackupFW").click(function(){
+				$("#btnBackupFW").prop("disabled", true);
+				$("#btnBackupFW").val("Please wait few seconds");
+				
+				$.get("./ctrlBackup.ncgi", function(data){
+					if(data.ret == "success")
+					{
+						alert("Backup process is finished. Please click following link to download");
+						$("#aBackuoFW").show();
+						$("#aBackuoFW").prop("href", data.link);
+					}
+					else
+					{
+						alert(data.ret);
+						$("#aBackuoFW").hide();
+						$("#aBackuoFW").prop("href", data.link);
+					}
+					
+					$("#btnBackupFW").val("Backup");
+					$("#btnBackupFW").prop("disabled", false);
+				});
+			});
+		});
+		//]]>
+		</script>
+	</head>
+	<body>
+		<br>
+		<h3 style="color: red;">Please keep power connection during firmware update or backup process.</h3>
+		<table border="1" cellspacing="0">
+			<tr><td>
+		<table>
+			<div id="divUpdateFW">
+				<tr bgcolor="#D0D0D0">
+					<td><div><b>Update Firmware</b></div></td>
+				</tr>
+				<tr>
+					<td>
+						<form id="frmUpdateFW" action="firmwareupgrade.cgi" method="post" enctype="multipart/form-data">
+							<input id="firmware" name="firmware" type="file">
+							<input id="btnUpdateFW" type="button" value="Update" disabled>
+						</form>
+					</td>
+				</tr>
+			</div>
+			<div id="divBackupFW">
+				<tr bgcolor="#D0D0D0">
+					<td><div><b>Backup Firmware</b></div></td>
+				</tr>
+				<tr>
+					<td>
+						<input id="btnBackupFW" type="button" value="Backup">
+						<a id="aBackuoFW" href="">Download backup file</a>
+					</td>
+				</tr>
+				<tr>
+					<td><div id="InfoText"></div></td>
+				</tr>
+			</div>
+		</table>
+			</td></tr>
+		</table>
+	</body>
+</html>

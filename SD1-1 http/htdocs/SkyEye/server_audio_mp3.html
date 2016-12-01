@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton Sky Eye Demo Page</title>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="js/jquery.jplayer.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		
+		<script type="text/javascript">
+		//<![CDATA[
+			
+			var loaded_time = new Date();
+			var identify_key = loaded_time.getTime() % 1000000000;
+			var jplayer_loadstart_time = 0;
+			var sync_delay_msec = 0;
+			var last_sync_time = 0;
+			
+			$.extend({
+				getUrlVars: function(){
+					var vars = [], hash;
+					var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+					for(var i = 0; i < hashes.length; i++)
+					{
+						hash = hashes[i].split('=');
+						vars.push(hash[0]);
+						vars[hash[0]] = hash[1];
+					}
+					return vars;
+				},
+				getUrlVar: function(name){
+					return $.getUrlVars()[name];
+				}
+			});
+			
+			if(verifyUser() == "")
+				window.top.location.href = "/";
+			
+			$(document).ready(function(e){
+				$("#jplayer_status").val("Loading...");
+				
+				$("#jplayer_status").click(function() {
+					if($("#jplayer_status").val() != "Disable")
+					{
+						$("#jquery_jplayer").jPlayer("play");
+						$("#jplayer_status").val("Loading...");
+						$("#jplayer_status").prop("disabled", true);
+					}
+					else
+					{
+						$("#jquery_jplayer").jPlayer("stop");
+						$("#jplayer_status").val("Enable");
+					}
+				});
+				
+				if($.getUrlVar("solution") == "html")
+				{
+					jplayer_solution = "html, flash";
+					$("#jplayer_object").show();
+				}
+				else if($.getUrlVar("solution") == "flash")
+				{
+					jplayer_solution = "flash, html";
+					$("#jplayer_object").show();
+				}
+				else
+				{
+					$("#jplayer_object").hide();
+				}
+				
+				// Instance jPlayer
+				$("#jquery_jplayer").jPlayer({
+					ready: function(event) {
+						$(this).jPlayer("setMedia", {
+							mp3: "/server.audio?kbsize=102400&unique=" + new Date().getTime()
+						});
+						
+						$("#jplayer_status").val("Loading...");
+						
+						if(event.jPlayer.html.used && event.jPlayer.html.audio.available)
+						{
+							$("#jplayer_applied_solution").text("[HTML5 is applied]");
+							
+							if($.jPlayer.platform.iphone || $.jPlayer.platform.ipad || $.jPlayer.platform.android)
+							{
+								$("#jplayer_status").val("Enable");
+								$("#jplayer_status").prop("disabled", false);
+							}
+						}
+						else
+						{
+							$("#jplayer_applied_solution").text("[FLASH is applied]");
+							$("#jplayer_status").trigger("click");
+						}
+					},
+					loadstart: function(event) {
+						jplayer_loadstart_time = new Date();
+						console.log("loadstart: " + (jplayer_loadstart_time - loaded_time));
+					},
+					play: function(event) {
+						console.log("playing with total duration: " + event.jPlayer.status.duration);
+						if(last_sync_time > 0)
+						{
+							$(this).jPlayer("play", last_sync_time);
+						}
+						else
+						{
+							sync_delay_msec = new Date() - jplayer_loadstart_time;
+							last_sync_time = Math.floor(event.jPlayer.status.currentTime);
+						}
+						console.log("playing with sync_delay_time: " + sync_delay_msec + ", last_sync_time: " + last_sync_time);
+
+						$("#jplayer_status").val("Disable");
+						$("#jplayer_status").prop("disabled", false);
+					},
+					timeupdate: function(event) {
+						//console.log("currentTime: ", event.jPlayer.status.currentTime);
+						if((sync_delay_msec > 500) && (event.jPlayer.status.currentTime - last_sync_time >= 4.5))
+						{
+							//console.log("1: " + event.jPlayer.status.currentTime + ", " + last_sync_time);
+							last_sync_time = Math.floor(event.jPlayer.status.currentTime + 1);
+							$(this).jPlayer("play", last_sync_time);
+							//console.log("2: " + event.jPlayer.status.currentTime + ", " + last_sync_time);
+							sync_delay_msec = sync_delay_msec - (last_sync_time - event.jPlayer.status.currentTime) * 1000;
+							//console.log("sync_delay_msec: ", sync_delay_msec);
+							$("#sync_status").text("[Delay: " + Math.floor(sync_delay_msec) + " ms]");
+						}
+					},
+					/*
+					abort: function() {
+						console.log("ended: " + (new Date() - jplayer_loadstart_time));
+						$(this).jPlayer("destory");
+						
+						last_sync_time = 0;
+						$(this).jPlayer("setMedia", {
+							mp3: "/server.audio?kbsize=102400&unique=" + new Date().getTime()
+						});
+
+						$("#jplayer_status").val("Loading...");
+						$("#jplayer_status").prop("disabled", true);
+					},
+					error: function() {
+						console.log("ended: " + (new Date() - jplayer_loadstart_time));
+						$(this).jPlayer("destory");
+						
+						last_sync_time = 0;
+						$(this).jPlayer("setMedia", {
+							mp3: "/server.audio?kbsize=102400&unique=" + new Date().getTime()
+						});
+
+						$("#jplayer_status").val("Loading...");
+						$("#jplayer_status").prop("disabled", true);
+					},
+					*/
+					ended: function() {
+						if($("#jplayer_status").val() != "Disable")
+							return ;
+						
+						console.log("ended: " + (new Date() - jplayer_loadstart_time));
+						$(this).jPlayer("destory");
+						
+						last_sync_time = 0;
+						$(this).jPlayer("setMedia", {
+							mp3: "/server.audio?kbsize=102400&unique=" + new Date().getTime()
+						});
+
+						$("#jplayer_status").val("Loading...");
+						$("#jplayer_status").prop("disabled", true);
+					},
+					canplaythrough: function(event) {
+						var curr_time = new Date();
+						//console.log((curr_time - jplayer_loadstart_time) / 1000);
+						//alert("Time passed: " + (curr_time - loaded_time));
+					},
+					loadedmetadata: function() {
+						console.log("loadedmetadata: " + (new Date() - jplayer_loadstart_time));
+						if(!$.jPlayer.platform.mobile)
+							$(this).jPlayer("play", 1);
+						if(!$.jPlayer.platform.iphone && !$.jPlayer.platform.ipad)
+						{
+							$("#jplayer_status").trigger("click");
+						}
+					},
+					solution: jplayer_solution,
+					supplied: "mp3",
+					wmode: "window"
+				});
+			});
+			
+		//]]>
+		</script>
+	</head>
+	
+	<body>
+		<div id ="jplayer_object">
+			<div id="jquery_jplayer" class="jp-jplayer"></div>
+			Audio Down Stream<input type="button" id="jplayer_status" value="Disable" disabled />
+			<br>
+			<span id="jplayer_applied_solution" style="font-size: 8pt;"></span>
+			<span id="sync_status" style="font-size: 8pt; color: #C0C0C0;">[Delay: N/A ms]</span>
+		</div>
+	</body>
+</html>

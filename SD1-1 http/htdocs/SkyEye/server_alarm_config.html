@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta http-equiv="cache-control" content="no-cache">
+	<meta http-equiv="expires" content="0">
+	<title>Nuvoton SkyEye Alarm Configuration Page</title>
+	<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico">
+	<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico">
+	<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet">
+	<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+	<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+	
+	<script type="text/javascript">
+	//<![CDATA[
+	var strTitle	= "Alarm Configuration",
+		strWait		= "<p>Please wait...</p>",
+		strRetry	= "<p>Sorry, something's wrong!<br>Please try to refresh manually later.</p>";
+	
+	var bitGPIO		= 0
+	var bitSnapshot	= 1;
+	var bitRecord	= 2;
+	
+	var bitTXT		= 0;
+	var bitJPG		= 1;
+	var bitAVI		= 2;
+	
+	var bitSun		= 0;
+	var bitMon		= 1;
+	var bitTue		= 2;
+	var bitWed		= 3;
+	var bitThu		= 4;
+	var bitFri		= 5;
+	var bitSat		= 6;
+	
+	$(function(){
+		$("#teSch0BeginDate").datepicker({
+			dateFormat: "yy/mm/dd"
+		});
+		$("#teSch0EndDate").datepicker({
+			dateFormat: "yy/mm/dd"
+		});
+		$("#teSch1BeginDate").datepicker({
+			dateFormat: "yy/mm/dd"
+		});
+		$("#teSch1EndDate").datepicker({
+			dateFormat: "yy/mm/dd"
+		});
+	});
+	
+	function viewDetails(event)
+	{
+		if($(event.target).val() == "+")
+		{
+			if(event.data.initFunc != null)
+				event.data.initFunc(event);
+			event.data.tblDetails.show();
+			$(event.target).val("-");
+		}
+		else
+		{
+			event.data.tblDetails.hide();
+			$(event.target).val("+");
+		}
+	}
+	
+	function openDialog(evt, dlg, strTitle, strMsg)
+	{
+		if(evt)
+			$(evt.target).prop("disabled", true);
+		dlg.html(strMsg);
+		dlg.dialog({
+			title: strTitle,
+			modal: true,
+			close: function()
+			{
+				if(evt)
+					$(evt.target).prop("disabled", false);
+			}
+		});
+	}
+	
+	function closeDialog(dlg)
+	{
+		dlg.dialog("close");
+	}
+	
+	function updateDialog(dlg, strNewMsg)
+	{
+		dlg.html(strNewMsg);
+	}
+	
+	function funcInitialAlarmConfig(config)
+	{
+		$("#chkSch0Snapshot").prop("checked", ((config.SCH0_MISSION & (1 << bitSnapshot)) > 0));
+		$("#chkSch0Record").prop("checked", ((config.SCH0_MISSION & (1 << bitRecord)) > 0));
+		
+		$("#chkSch1Snapshot").prop("checked", ((config.SCH1_MISSION & (1 << bitSnapshot)) > 0));
+		$("#chkSch1Record").prop("checked", ((config.SCH1_MISSION & (1 << bitRecord)) > 0));
+		
+		$("#chkGPIO_Snapshot").prop("checked", ((config.GPIO_MISSION & (1 << bitSnapshot)) > 0));
+		$("#chkGPIO_Record").prop("checked", ((config.GPIO_MISSION & (1 << bitRecord)) > 0));
+		$("#chkGPIO_GPIO").prop("checked", ((config.GPIO_MISSION & (1 << bitGPIO)) > 0));
+		
+		$("#chkGPIO_Mail_TXT").prop("checked", ((config.GPIO_MAIL & (1 << bitTXT)) > 0));
+		$("#chkGPIO_Mail_JPG").prop("checked", ((config.GPIO_MAIL & (1 << bitJPG)) > 0));
+		$("#chkGPIO_Mail_AVI").prop("checked", ((config.GPIO_MAIL & (1 << bitAVI)) > 0));
+		
+		$("#chkGPIO_FTP_TXT").prop("checked", ((config.GPIO_FTP & (1 << bitTXT)) > 0));
+		$("#chkGPIO_FTP_JPG").prop("checked", ((config.GPIO_FTP & (1 << bitJPG)) > 0));
+		$("#chkGPIO_FTP_AVI").prop("checked", ((config.GPIO_FTP & (1 << bitAVI)) > 0));
+		
+		$("#chkGPIO_Dropbox_TXT").prop("checked", ((config.GPIO_DROPBOX & (1 << bitTXT)) > 0));
+		$("#chkGPIO_Dropbox_JPG").prop("checked", ((config.GPIO_DROPBOX & (1 << bitJPG)) > 0));
+		$("#chkGPIO_Dropbox_AVI").prop("checked", ((config.GPIO_DROPBOX & (1 << bitAVI)) > 0));
+
+		$("#chkMD_Snapshot").prop("checked", ((config.MD0_MISSION & (1 << bitSnapshot)) > 0));
+		$("#chkMD_Record").prop("checked", ((config.MD0_MISSION & (1 << bitRecord)) > 0));
+		$("#chkMD_GPIO").prop("checked", ((config.MD0_MISSION & (1 << bitGPIO)) > 0));
+		
+		$("#chkMD_Mail_TXT").prop("checked", ((config.MD0_MAIL & (1 << bitTXT)) > 0));
+		$("#chkMD_Mail_JPG").prop("checked", ((config.MD0_MAIL & (1 << bitJPG)) > 0));
+		$("#chkMD_Mail_AVI").prop("checked", ((config.MD0_MAIL & (1 << bitAVI)) > 0));
+		
+		$("#chkMD_FTP_TXT").prop("checked", ((config.MD0_FTP & (1 << bitTXT)) > 0));
+		$("#chkMD_FTP_JPG").prop("checked", ((config.MD0_FTP & (1 << bitJPG)) > 0));
+		$("#chkMD_FTP_AVI").prop("checked", ((config.MD0_FTP & (1 << bitAVI)) > 0));
+		
+		$("#chkMD_Dropbox_TXT").prop("checked", ((config.MD0_DROPBOX & (1 << bitTXT)) > 0));
+		$("#chkMD_Dropbox_JPG").prop("checked", ((config.MD0_DROPBOX & (1 << bitJPG)) > 0));
+		$("#chkMD_Dropbox_AVI").prop("checked", ((config.MD0_DROPBOX & (1 << bitAVI)) > 0));
+		
+		$("#chkVD_Snapshot").prop("checked", ((config.VD_MISSION & (1 << bitSnapshot)) > 0));
+		$("#chkVD_Record").prop("checked", ((config.VD_MISSION & (1 << bitRecord)) > 0));
+		$("#chkVD_GPIO").prop("checked", ((config.VD_MISSION & (1 << bitGPIO)) > 0));
+		
+		$("#chkVD_Mail_TXT").prop("checked", ((config.VD_MAIL & (1 << bitTXT)) > 0));
+		$("#chkVD_Mail_JPG").prop("checked", ((config.VD_MAIL & (1 << bitJPG)) > 0));
+		$("#chkVD_Mail_AVI").prop("checked", ((config.VD_MAIL & (1 << bitAVI)) > 0));
+		
+		$("#chkVD_FTP_TXT").prop("checked", ((config.VD_FTP & (1 << bitTXT)) > 0));
+		$("#chkVD_FTP_JPG").prop("checked", ((config.VD_FTP & (1 << bitJPG)) > 0));
+		$("#chkVD_FTP_AVI").prop("checked", ((config.VD_FTP & (1 << bitAVI)) > 0));
+		
+		$("#chkVD_Dropbox_TXT").prop("checked", ((config.VD_DROPBOX & (1 << bitTXT)) > 0));
+		$("#chkVD_Dropbox_JPG").prop("checked", ((config.VD_DROPBOX & (1 << bitJPG)) > 0));
+		$("#chkVD_Dropbox_AVI").prop("checked", ((config.VD_DROPBOX & (1 << bitAVI)) > 0));
+	}
+	
+	function readAlarmConfig(e) {
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "read"
+			},
+			dataType: "json",
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(data) {
+				funcInitialAlarmConfig(data);
+				closeDialog($("#Info-Dialog"));
+			}
+		});
+	}	// readAlarmConfig
+	
+	function writeAlarmConfig(e) {
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "write",
+				btnType: $(e.target).val(),
+				SCH0_MISSION:	($("#chkSch0Snapshot").is(":checked") << bitSnapshot) | ($("#chkSch0Record").is(":checked") << bitRecord),
+				SCH1_MISSION:	($("#chkSch1Snapshot").is(":checked") << bitSnapshot) | ($("#chkSch1Record").is(":checked") << bitRecord),
+
+				GPIO_MISSION:	$("#chkGPIO_GPIO").is(":checked") | ($("#chkGPIO_Snapshot").is(":checked") << bitSnapshot) | ($("#chkGPIO_Record").is(":checked") << bitRecord),
+				GPIO_MAIL:		$("#chkGPIO_Mail_TXT").is(":checked") | ($("#chkGPIO_Mail_JPG").is(":checked") << bitJPG) | ($("#chkGPIO_Mail_AVI").is(":checked") << bitAVI),
+				GPIO_FTP:		$("#chkGPIO_FTP_TXT").is(":checked") | ($("#chkGPIO_FTP_JPG").is(":checked") << bitJPG) | ($("#chkGPIO_FTP_AVI").is(":checked") << bitAVI),
+				GPIO_DROPBOX:	$("#chkGPIO_Dropbox_TXT").is(":checked") | ($("#chkGPIO_Dropbox_JPG").is(":checked") << bitJPG) | ($("#chkGPIO_Dropbox_AVI").is(":checked") << bitAVI),
+
+				MD0_MISSION:	$("#chkMD_GPIO").is(":checked") | ($("#chkMD_Snapshot").is(":checked") << bitSnapshot) | ($("#chkMD_Record").is(":checked") << bitRecord),
+				MD0_MAIL:		$("#chkMD_Mail_TXT").is(":checked") | ($("#chkMD_Mail_JPG").is(":checked") << bitJPG) | ($("#chkMD_Mail_AVI").is(":checked") << bitAVI),
+				MD0_FTP:		$("#chkMD_FTP_TXT").is(":checked") | ($("#chkMD_FTP_JPG").is(":checked") << bitJPG) | ($("#chkMD_FTP_AVI").is(":checked") << bitAVI),
+				MD0_DROPBOX:	$("#chkMD_Dropbox_TXT").is(":checked") | ($("#chkMD_Dropbox_JPG").is(":checked") << bitJPG) | ($("#chkMD_Dropbox_AVI").is(":checked") << bitAVI),
+				
+				VD_MISSION:		$("#chkVD_GPIO").is(":checked") | ($("#chkVD_Snapshot").is(":checked") << bitSnapshot) | ($("#chkVD_Record").is(":checked") << bitRecord),
+				VD_MAIL:		$("#chkVD_Mail_TXT").is(":checked") | ($("#chkVD_Mail_JPG").is(":checked") << bitJPG) | ($("#chkVD_Mail_AVI").is(":checked") << bitAVI),
+				VD_FTP:			$("#chkVD_FTP_TXT").is(":checked") | ($("#chkVD_FTP_JPG").is(":checked") << bitJPG) | ($("#chkVD_FTP_AVI").is(":checked") << bitAVI),
+				VD_DROPBOX:		$("#chkVD_Dropbox_TXT").is(":checked") | ($("#chkVD_Dropbox_JPG").is(":checked") << bitJPG) | ($("#chkVD_Dropbox_AVI").is(":checked") << bitAVI),
+			},
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(response) 
+			{
+				$.get("/server.command?command=reload_config", function(data){
+					closeDialog($("#Info-Dialog"));
+				});
+			}
+		});
+	}	// writeAlarmConfig
+	
+	function funcInitialSchConfig(config)
+	{
+		var varTime;
+		
+		$("#chkSch0Enable").prop("checked", (config.SCH0_Enable == 1));
+		
+		$("#teSch0BeginDate").val(config.SCH0_BeginDate);
+		$("#teSch0EndDate").val(config.SCH0_EndDate);
+		
+		varTime = config.SCH0_BeginTime.split(":");
+		$("#selSch0BeginHour").val(varTime[0]);
+		$("#selSch0BeginMinute").val(varTime[1]);
+		$("#selSch0BeginSecond").val(varTime[2]);
+		
+		varTime = config.SCH0_EndTime.split(":");
+		$("#selSch0EndHour").val(varTime[0]);
+		$("#selSch0EndMinute").val(varTime[1]);
+		$("#selSch0EndSecond").val(varTime[2]);
+		
+		$("#chkSch0Sun").prop("checked", (config.SCH0_Weekly & (1 << bitSun)) > 0);
+		$("#chkSch0Mon").prop("checked", (config.SCH0_Weekly & (1 << bitMon)) > 0);
+		$("#chkSch0Tue").prop("checked", (config.SCH0_Weekly & (1 << bitTue)) > 0);
+		$("#chkSch0Wed").prop("checked", (config.SCH0_Weekly & (1 << bitWed)) > 0);
+		$("#chkSch0Thu").prop("checked", (config.SCH0_Weekly & (1 << bitThu)) > 0);
+		$("#chkSch0Fri").prop("checked", (config.SCH0_Weekly & (1 << bitThu)) > 0);
+		$("#chkSch0Sat").prop("checked", (config.SCH0_Weekly & (1 << bitSat)) > 0);
+		
+		$("#chkSch1Enable").prop("checked", (config.SCH1_Enable == 1));
+		
+		$("#teSch1BeginDate").val(config.SCH1_BeginDate);
+		$("#teSch1EndDate").val(config.SCH1_EndDate);
+		
+		varTime = config.SCH1_BeginTime.split(":");
+		$("#teSch1BeginHour").val(varTime[0]);
+		$("#teSch1BeginMinute").val(varTime[1]);
+		$("#teSch1BeginSecond").val(varTime[2]);
+		
+		varTime = config.SCH1_EndTime.split(":");
+		$("#teSch1EndHour").val(varTime[0]);
+		$("#teSch1EndMinute").val(varTime[1]);
+		$("#teSch1EndSecond").val(varTime[2]);
+		
+		$("#chkSch1Sun").prop("checked", (config.SCH1_Weekly & (1 << bitSun)) > 0);
+		$("#chkSch1Mon").prop("checked", (config.SCH1_Weekly & (1 << bitMon)) > 0);
+		$("#chkSch1Tue").prop("checked", (config.SCH1_Weekly & (1 << bitTue)) > 0);
+		$("#chkSch1Wed").prop("checked", (config.SCH1_Weekly & (1 << bitWed)) > 0);
+		$("#chkSch1Thu").prop("checked", (config.SCH1_Weekly & (1 << bitThu)) > 0);
+		$("#chkSch1Fri").prop("checked", (config.SCH1_Weekly & (1 << bitThu)) > 0);
+		$("#chkSch1Sat").prop("checked", (config.SCH1_Weekly & (1 << bitSat)) > 0);
+	}	// funcInitialSchConfig
+	
+	function readSchParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmInConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "read",
+				ActItem: "SCHEDULE"
+			},
+			dataType: "json",
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(data) {
+				funcInitialSchConfig(data);
+				closeDialog($("#Info-Dialog"));
+			}
+		});
+	}	// readSchParam
+	
+	function writeSchParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		var parseSch0BeginDate = Date.parse($("#teSch0BeginDate").val());
+		var parseSch0EndDate = Date.parse($("#teSch0EndDate").val());
+		var parseSch1BeginDate = Date.parse($("#teSch1BeginDate").val());
+		var parseSch1EndDate = Date.parse($("#teSch1EndDate").val());
+		
+		if(isNaN(parseSch0BeginDate) || isNaN(parseSch0EndDate) || isNaN(parseSch1BeginDate) || isNaN(parseSch1EndDate))
+		{
+			alert("Invalid date!");
+			return ;
+		}
+		
+		
+		$.ajax({
+			url: "ctrlAlarmInConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "write",
+				btnType: $(e.target).val(),
+				ActItem: "SCHEDULE",
+				SCH0_Enable: $("#chkSch0Enable").is(":checked") ? 1 : 0,
+				SCH0_BeginDate: $("#teSch0BeginDate").val(),
+				SCH0_EndDate: $("#teSch0EndDate").val(),
+				SCH0_Weekly: $("#chkSch0Sun").is(":checked") | ($("#chkSch0Mon").is(":checked") << bitMon) | ($("#chkSch0Tue").is(":checked") << bitTue) | ($("#chkSch0Wed").is(":checked") << bitWed) | ($("#chkSch0Thu").is(":checked") << bitThu) | ($("#chkSch0Fri").is(":checked") << bitFri) | ($("#chkSch0Sat").is(":checked") << bitSat),
+				SCH0_BeginTime: $("#selSch0BeginHour").val() + ":" + $("#selSch0BeginMinute").val() + ":" + $("#selSch0BeginSecond").val(),
+				SCH0_EndTime: $("#selSch0EndHour").val() + ":" + $("#selSch0EndMinute").val() + ":" + $("#selSch0EndSecond").val(),
+				
+				SCH1_Enable: $("#chkSch1Enable").is(":checked") ? 1 : 0,
+				SCH1_BeginDate: $("#teSch1BeginDate").val(),
+				SCH1_EndDate: $("#teSch1EndDate").val(),
+				SCH1_Weekly: $("#chkSch1Sun").is(":checked") | ($("#chkSch1Mon").is(":checked") << bitMon) | ($("#chkSch1Tue").is(":checked") << bitTue) | ($("#chkSch1Wed").is(":checked") << bitWed) | ($("#chkSch1Thu").is(":checked") << bitThu) | ($("#chkSch1Fri").is(":checked") << bitFri) | ($("#chkSch1Sat").is(":checked") << bitSat),
+				SCH1_BeginTime: $("#teSch1BeginHour").val() + ":" + $("#teSch1BeginMinute").val() + ":" + $("#teSch1BeginSecond").val(),
+				SCH1_EndTime: $("#teSch1EndHour").val() + ":" + $("#teSch1EndMinute").val() + ":" + $("#teSch1EndSecond").val(),
+			},
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(response) 
+			{
+				$.get("/server.command?command=reload_config", function(data){
+					closeDialog($("#Info-Dialog"));
+				});
+			}
+		});
+	}	// writeSchParam
+	
+	function readMDParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.get("ctrlAlarmInConfig.ncgi?doAction=read&ActItem=MD", function(data){
+			$("#teMD0_FrameDiff").val(data.MD0_FrameDiff);
+			$("#teMD1_FrameDiff").val(data.MD1_FrameDiff);
+			closeDialog($("#Info-Dialog"));
+		});
+	}	// readMDParam
+	
+	function writeMDParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.get("ctrlAlarmInConfig.ncgi?doAction=write&ActItem=MD&MD0_FrameDiff=" + $("#teMD0_FrameDiff").val() + "&MD1_FrameDiff=" + $("#teMD1_FrameDiff").val(), function(data){
+			$.get("/server.command?command=reload_config", function(data){
+				closeDialog($("#Info-Dialog"));
+			});
+		});
+	}	// writeMDParam
+	
+	function readVDParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.get("ctrlAlarmInConfig.ncgi?doAction=read&ActItem=VD", function(data){
+			$("#teVD_FrameDiff").val(data.VD_FrameDiff);
+			closeDialog($("#Info-Dialog"));
+		});
+	}	// readVDParam
+	
+	function writeVDParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.get("ctrlAlarmInConfig.ncgi?doAction=write&ActItem=VD&VD_FrameDiff=" + $("#teVD_FrameDiff").val(), function(data){
+			$.get("/server.command?command=reload_config", function(data){
+				closeDialog($("#Info-Dialog"));
+			});
+		});
+	}	// writeVDParam
+	
+	function readMailParam(e) {
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmOutConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "read",
+				ActItem: "SMTP"
+			},
+			dataType: "json",
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(data) {
+				$("#teMailHost").val(data.MAIL_HOST);
+				$("#teMailPort").val(data.MAIL_PORT);
+				$("#teMailReceiver").val(data.MAIL_RECEIVER);
+				$("#teMailAccount").val(data.MAIL_ACCOUNT);
+				$("#teMailPassword").val(data.MAIL_PASSWORD);
+				$("#teMailSubject").val(data.MAIL_SUBJECT);
+				$("#teMailContent").val(data.MAIL_CONTENT);
+				
+				closeDialog($("#Info-Dialog"));
+			}
+		});
+	}	// readMailParam
+	
+	function writeMailParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmOutConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "write",
+				btnType: $(e.target).val(),
+				ActItem: "SMTP",
+				MAIL_HOST: $("#teMailHost").val(),
+				MAIL_PORT: $("#teMailPort").val(),
+				MAIL_RECEIVER: $("#teMailReceiver").val(),
+				MAIL_ACCOUNT: $("#teMailAccount").val(),
+				MAIL_PASSWORD: $("#teMailPassword").val(),
+				MAIL_SUBJECT: $("#teMailSubject").val(),
+				MAIL_CONTENT: $("#teMailContent").val()
+			},
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(response) 
+			{
+				$.get("/server.command?command=reload_config", function(data){
+					closeDialog($("#Info-Dialog"));
+				});
+			}
+		});
+	}	// writeMailParam
+	
+	function readFtpParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmOutConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "read",
+				ActItem: "FTP"
+			},
+			dataType: "json",
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(data) {
+				$("#teFtpServer").val(data.FTP_HOST);
+				$("#teFtpPort").val(data.FTP_PORT);
+				$("#teFtpUsername").val(data.FTP_USERNAME);
+				$("#teFtpPassword").val(data.FTP_PASSWORD);
+				$("#teFtpUploadPath").val(data.FTP_REMOTE_PATH);
+				
+				closeDialog($("#Info-Dialog"));
+			}
+		});
+	}	// readFtpParam
+	
+	function writeFtpParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmOutConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "write",
+				btnType: $(e.target).val(),
+				ActItem: "FTP",
+				FTP_HOST: $("#teFtpServer").val(),
+				FTP_PORT: $("#teFtpPort").val(),
+				FTP_USERNAME: $("#teFtpUsername").val(),
+				FTP_PASSWORD: $("#teFtpPassword").val(),
+				FTP_REMOTE_PATH: $("#teFtpUploadPath").val()
+			},
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(response) 
+			{
+				$.get("/server.command?command=reload_config", function(data){
+					$("#Info-Dialog").dialog("close");
+				});
+				
+				closeDialog($("#Info-Dialog"));
+			}
+		});
+	}	// writeFtpParam
+	
+	function readDropboxParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmOutConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "read",
+				ActItem: "DROPBOX"
+			},
+			dataType: "json",
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(data) {
+				$("#teDropboxUploadPath").val(data.DROPBOX_REMOTE_PATH);
+				
+				closeDialog($("#Info-Dialog"));
+			}
+		});
+	}	// readDropboxParam
+	
+	function writeDropboxParam(e)
+	{
+		openDialog(e, $("#Info-Dialog"), strTitle, strWait);
+		
+		$.ajax({
+			url: "ctrlAlarmOutConfig.ncgi",
+			type: "GET",
+			data: {
+				doAction: "write",
+				btnType: $(e.target).val(),
+				ActItem: "DROPBOX",
+				DROPBOX_REMOTE_PATH: $("#teDropboxUploadPath").val()
+			},
+			error: function(xhr) {
+				updateDialog($("#Info-Dialog"), strRetry);
+			},
+			success: function(response) 
+			{
+				$.get("/server.command?command=reload_config", function(data){
+					$("#Info-Dialog").dialog("close");
+				});
+				
+				closeDialog($("#Info-Dialog"));
+			}
+		});
+	}	// writeDropboxParam
+	
+	function checkStorage()
+	{
+		$.get("server.command?command=check_storage", function(data)
+		{
+			if(data.value == "0")
+			{
+				alert("Can not detect external storage inserted! Snapshot or record request would not be handled!");
+				return ;
+			}
+		});
+	}
+	
+	function checkDoAction(
+		Attach,
+		DoAction
+	)
+	{
+		if(Attach.is(":checked") && !DoAction.is(":checked"))
+			DoAction.prop("checked", Attach.is(":checked"));
+	}
+	
+	$(document).ready(function(e){
+		checkStorage();
+		
+		for(var i = 0; i < 24; i++)
+		{
+			$("#selSch0BeginHour").append("<option value=" + i + ">" + i + "</option>");
+			$("#selSch0EndHour").append("<option value=" + i + ">" + i + "</option>");
+			$("#teSch1BeginHour").append("<option value=" + i + ">" + i + "</option>");
+			$("#teSch1EndHour").append("<option value=" + i + ">" + i + "</option>");
+		}
+		
+		for(var i = 0; i < 60; i++)
+		{
+			$("#selSch0BeginMinute").append("<option value=" + i + ">" + i + "</option>");
+			$("#selSch0BeginSecond").append("<option value=" + i + ">" + i + "</option>");
+			$("#selSch0EndMinute").append("<option value=" + i + ">" + i + "</option>");
+			$("#selSch0EndSecond").append("<option value=" + i + ">" + i + "</option>");
+			$("#teSch1BeginMinute").append("<option value=" + i + ">" + i + "</option>");
+			$("#teSch1BeginSecond").append("<option value=" + i + ">" + i + "</option>");
+			$("#teSch1EndMinute").append("<option value=" + i + ">" + i + "</option>");
+			$("#teSch1EndSecond").append("<option value=" + i + ">" + i + "</option>");
+		}
+		
+		$("#tblSch0").hide();
+		$("#tblSch1").hide();
+		$("#tblGPIO").hide();
+		$("#tblMotionDetection").hide();
+		$("#tblVoiceDetection").hide();
+		$("#tblMail").hide();
+		$("#tblFTP").hide();
+		$("#tblDropbox").hide();
+		$("#tblSnapshot").hide();
+		$("#tblRecord").hide();
+		$("#tblGPIOOutput").hide();
+		
+		readAlarmConfig();
+		
+		$("#btnSch0Details").click({tblDetails: $("#tblSch0"), initFunc: readSchParam}, viewDetails);
+		$("#btnSch1Details").click({tblDetails: $("#tblSch1"), initFunc: readSchParam}, viewDetails);
+		$("#btnGPIODetails").click({tblDetails: $("#tblGPIO")}, viewDetails);
+		$("#btnMotinDetectionDetails").click({tblDetails: $("#tblMotionDetection"), initFunc: readMDParam}, viewDetails);
+		$("#btnVoiceDetectionDetails").click({tblDetails: $("#tblVoiceDetection"), initFunc: readVDParam}, viewDetails);
+		$("#btnMailDetails").click({tblDetails: $("#tblMail"), initFunc: readMailParam}, viewDetails);
+		$("#btnFTPDetails").click({tblDetails: $("#tblFTP"), initFunc: readFtpParam}, viewDetails);
+		$("#btnDropboxDetails").click({tblDetails: $("#tblDropbox"), initFunc: readDropboxParam}, viewDetails);
+		$("#btnSnapshotDetails").click({tblDetails: $("#tblGPIOFileTXT")}, viewDetails);
+		$("#btnRecordDetails").click({tblDetails: $("#tblGPIOFileJPG")}, viewDetails);
+		$("#btnGPIOOutputDetails").click({tblDetails: $("#tblGPIOFileAVI")}, viewDetails);
+		
+		$("#btnApplyAll").click(writeAlarmConfig).click(writeSchParam).click(writeMDParam).click(writeVDParam).click(writeMailParam).click(writeFtpParam).click(writeDropboxParam);
+		$("#btnApplyConfigMatrix").click(writeAlarmConfig);
+		$("#btnUndoConfigMatrix").click(readAlarmConfig);
+		
+		$("#btnApplySch0Param").click(writeSchParam);
+		$("#btnUndoSch0Param").click(readSchParam);
+		$("#btnApplySch1Param").click(writeSchParam);
+		$("#btnUndoSch1Param").click(readSchParam);
+		$("#btnApplyMDParam").click(writeMDParam);
+		$("#btnUndoMDParam").click(readMDParam);
+		$("#btnApplyVDParam").click(writeVDParam);
+		$("#btnUndoVDParam").click(readVDParam);
+		$("#btnApplyMailParam").click(writeMailParam);
+		$("#btnUndoMailParam").click(readMailParam);
+		$("#btnApplyFtpParam").click(writeFtpParam);
+		$("#btnUndoFtpParam").click(readFtpParam);
+		$("#btnApplyDropboxParam").click(writeDropboxParam);
+		$("#btnUndoDropboxParam").click(readDropboxParam);
+		
+	});
+	//]]>
+	</script>
+</head>
+<body>
+	<div id="Info-Dialog"></div>
+	<table border="1" cellspacing="0" cellpadding="2">
+		<tr align="center">
+			<td colspan="10" bgcolor="#D0D0D0">
+				<b>Alarm In-Out Configuration</b>
+				<button onClick="window.open('./param.cgi?action=list&group=file&fmt=link', 'RecordFile', 'width=360,height=420,scrollbars=yes');">Recorded Files</button>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="10">
+				<input type="button" id="btnSch0Details" value="+">Schedule_1
+				<input type="checkbox" id="chkSch0Snapshot" title="Snapshot when schedule begins">Snapshot
+				<input type="checkbox" id="chkSch0Record" title="Start record when schedule schedule begins and stop record when schedule ends">Record
+				<table id="tblSch0" title="All alarm configurations would only take effect under a valid schedule configuration">
+					<tr>
+						<td colspan="4"><hr></td>
+					</tr>
+					<tr>
+						<td>Start Date</td>
+						<td><input type="text" id="teSch0BeginDate"></td>
+						<td>End Date</td>
+						<td><input type="text" id="teSch0EndDate"></td>
+					</tr>
+					<tr>
+						<td>Weekly</td>
+						<td colspan="3">
+							<input type="checkbox" id="chkSch0Sun">Sun.
+							<input type="checkbox" id="chkSch0Mon">Mon.
+							<input type="checkbox" id="chkSch0Tue">Tue.
+							<input type="checkbox" id="chkSch0Wed">Wed.
+							<input type="checkbox" id="chkSch0Thu">Thu.
+							<input type="checkbox" id="chkSch0Fri">Fri.
+							<input type="checkbox" id="chkSch0Sat">Sat.
+						</td>
+					</tr>
+					<tr>
+						<td>Start Time</td>
+						<td>
+							<select id="selSch0BeginHour"></select>
+							<select id="selSch0BeginMinute"></select>
+							<select id="selSch0BeginSecond"></select>
+						</td>
+						<td>End Time</td>
+						<td>
+							<select id="selSch0EndHour"></select>
+							<select id="selSch0EndMinute"></select>
+							<select id="selSch0EndSecond"></select>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="4"><hr></td>
+					</tr>
+					<tr align="right">
+						<td>
+							<input type="checkbox" id="chkSch0Enable" title="Check to enable Schedule_1">Enable
+						</td>
+						<td colspan="3">
+							<input type="button" id="btnApplySch0Param" value="Apply">
+							<input type="button" id="btnUndoSch0Param" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="10">
+				<input type="button" id="btnSch1Details" value="+">Schedule_2
+				<input type="checkbox" id="chkSch1Snapshot" title="Snapshot when schedule begins">Snapshot
+				<input type="checkbox" id="chkSch1Record" title="Start record when schedule schedule begins and stop record when schedule ends">Record
+				<table id="tblSch1" title="All alarm configurations would only take effect under a valid schedule configuration">
+					<tr>
+						<td colspan="4"><hr></td>
+					</tr>
+					<tr>
+						<td>Start Date</td>
+						<td><input type="text" id="teSch1BeginDate"></td>
+						<td>End Date</td>
+						<td><input type="text" id="teSch1EndDate"></td>
+					</tr>
+					<tr>
+						<td>Weekly</td>
+						<td colspan="3">
+							<input type="checkbox" id="chkSch1Sun">Sun.
+							<input type="checkbox" id="chkSch1Mon">Mon.
+							<input type="checkbox" id="chkSch1Tue">Tue.
+							<input type="checkbox" id="chkSch1Wed">Wed.
+							<input type="checkbox" id="chkSch1Thu">Thu.
+							<input type="checkbox" id="chkSch1Fri">Fri.
+							<input type="checkbox" id="chkSch1Sat">Sat.
+						</td>
+					</tr>
+					<tr>
+						<td>Start Time</td>
+						<td>
+							<select id="teSch1BeginHour"></select>
+							<select id="teSch1BeginMinute"></select>
+							<select id="teSch1BeginSecond"></select>
+						</td>
+						<td>End Time</td>
+						<td>
+							<select id="teSch1EndHour"></select>
+							<select id="teSch1EndMinute"></select>
+							<select id="teSch1EndSecond"></select>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="4"><hr></td>
+					</tr>
+					<tr align="right">
+						<td>
+							<input type="checkbox" id="chkSch1Enable" title="Check to enable Schedule_1">Enable
+						</td>
+						<td colspan="3">
+							<input type="button" id="btnApplySch1Param" value="Apply">
+							<input type="button" id="btnUndoSch1Param" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td colspan="3">
+				<!--input type="checkbox" id="chkEnGPIO">
+				<input type="button" id="btnGPIODetails" value="+"-->GPIO-Trigger
+			</td>
+			<td colspan="3">
+				<input type="button" id="btnMotinDetectionDetails" value="+">Motion-Detect
+				<table id="tblMotionDetection">
+					<tr>
+						<td colspan="2"><hr></td>
+					</tr>
+					<tr>
+						<td>Port 0 Difference</td>
+						<td><input type="text" id="teMD0_FrameDiff" size="4">%</td>
+					</tr>
+					<tr>
+						<td colspan="2"><hr></td>
+					</tr>
+					<tr>
+						<td>Port 1 Difference</td>
+						<td><input type="text" id="teMD1_FrameDiff" size="4">%</td>
+					</tr>
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplyMDParam" value="Apply">
+							<input type="button" id="btnUndoMDParam" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+			<td colspan="3">
+				<input type="button" id="btnVoiceDetectionDetails" value="+">Voice-Detect
+				<table id="tblVoiceDetection">
+					<tr>
+						<td colspan="2"><hr></td>
+					</tr>
+					<tr>
+						<td>Difference</td>
+						<td><input type="text" id="teVD_FrameDiff" size="4">%</td>
+					</tr>
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplyVDParam" value="Apply">
+							<input type="button" id="btnUndoVDParam" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr align="center">
+			<td align="left">
+				<!--input type="button" id="btnSnapshotDetails" value="+"-->Snapshot
+				<!--table id="tblSnapshot">
+					<tr>
+						<td>Shot Count</td>
+						<td><input type="text" id="te" size="5"></td>
+					</tr>
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplySnapshotParam" value="Apply">
+							<input type="button" id="btnUndoSnapshotParam" value="Undo">
+						</td>
+					</tr>
+				</table-->
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkGPIO_Snapshot" value="on">
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkMD_Snapshot" value="on">
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkVD_Snapshot" value="on">
+			</td>
+		</tr>
+		<tr align="center">
+			<td align="left">
+				<!--input type="button" id="btnRecordDetails" value="+"-->Record
+				<!--table id="tblRecord">
+					<tr>
+						<td>Duration</td>
+						<td><input type="text" id="te" size="5">minute(s)</td>
+					</tr>
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplyRecordParam" value="Apply">
+							<input type="button" id="btnUndoRecordParam" value="Undo">
+						</td>
+					</tr>
+				</table-->
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkGPIO_Record" value="on">
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkMD_Record" value="on">
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkVD_Record" value="on">
+			</td>
+		</tr>
+		<tr align="center">
+			<td align="left">
+				<!--input type="button" id="btnGPIOOutputDetails" value="+"-->GPIO-Output
+				<table id="tblGPIOOutput">
+					<tr>
+						<td>GPIO Input 1</td>
+						<td><input type="checkbox" id="chkGPIO_PIN1" value="1"></td>
+					</tr>
+					<tr>
+						<td>GPIO Input 2</td>
+						<td><input type="checkbox" id="chkGPIO_PIN2" value="2"></td>
+					</tr>
+					<tr>
+						<td>GPIO Input 3</td>
+						<td><input type="checkbox" id="chkGPIO_PIN3" value="4"></td>
+					</tr>
+					<tr>
+						<td>GPIO Input 4</td>
+						<td><input type="checkbox" id="chkGPIO_PIN4" value="8"></td>
+					</tr>
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplyGPIOParam" value="Apply">
+							<input type="button" id="btnUndoGPIOParam" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkGPIO_GPIO" value="on">
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkMD_GPIO" value="on">
+			</td>
+			<td colspan="3">
+				<input type="checkbox" id="chkVD_GPIO" value="on">
+			</td>
+		</tr>
+		<tr align="center">
+			<td></td>
+			<td>TXT</td>
+			<td>JPG</td>
+			<td>AVI</td>
+			<td>TXT</td>
+			<td>JPG</td>
+			<td>AVI</td>
+			<td>TXT</td>
+			<td>JPG</td>
+			<td>AVI</td>
+		</tr>
+		<tr align="center">
+			<td align="left">
+				<input type="button" id="btnMailDetails" value="+">Email
+				<table id="tblMail">
+					<tr>
+						<td colspan="2"><hr></td>
+					</tr>
+					<tr>
+						<td>Host</td>
+						<td>
+							<input type="text" id="teMailHost" maxlength="64">
+						</td>
+					</tr>
+					<tr>
+						<td>Port</td>
+						<td><input type="text" id="teMailPort" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Account</td>
+						<td><input type="text" id="teMailAccount" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Password</td>
+						<td><input type="password" id="teMailPassword" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Receiver</td>
+						<td><input type="text" id="teMailReceiver" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Subject</td>
+						<td><input type="text" id="teMailSubject" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Content</td>
+						<td><textarea id="teMailContent" rows="4" cols="16" maxlength="64"></textarea></td>
+					</tr>
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplyMailParam" value="Apply">
+							<input type="button" id="btnUndoMailParam" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+			<td>
+				<input type="checkbox" id="chkGPIO_Mail_TXT" value="on">
+			</td>
+			<td>
+				<input type="checkbox" id="chkGPIO_Mail_JPG" value="on" onClick="checkDoAction($(this), $('#chkGPIO_Snapshot'));">
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkGPIO_Mail_AVI" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkMD_Mail_TXT" value="on">
+			</td>
+			<td>
+				<input type="checkbox" id="chkMD_Mail_JPG" value="on" onClick="checkDoAction($(this), $('#chkMD_Snapshot'));">
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkMD_Mail_AVI" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkVD_Mail_TXT" value="on">
+			</td>
+			<td>
+				<input type="checkbox" id="chkVD_Mail_JPG" value="on" onClick="checkDoAction($(this), $('#chkVD_Snapshot'));">
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkVD_Mail_AVI" value="on"-->
+			</td>
+		</tr>
+		<tr align="center">
+			<td align="left">
+				<input type="button" id="btnFTPDetails" value="+">FTP
+				<table id="tblFTP">
+					<tr>
+						<td colspan="2"><hr></td>
+					</tr>
+					<tr>
+						<td>Server Address</td>
+						<td><input type="text" id="teFtpServer" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Server Port</td>
+						<td><input type="text" id="teFtpPort" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Username</td>
+						<td><input type="text" id="teFtpUsername" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Password</td>
+						<td><input type="password" id="teFtpPassword" maxlength="64"></td>
+					</tr>
+					<tr>
+						<td>Upload Path</td>
+						<td><input type="text" id="teFtpUploadPath" maxlength="64"></td>
+					</tr>
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplyFtpParam" value="Apply">
+							<input type="button" id="btnUndoFtpParam" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkGPIO_FTP_TXT" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkGPIO_FTP_JPG" value="on" onClick="checkDoAction($(this), $('#chkGPIO_Snapshot'));">
+			</td>
+			<td>
+				<input type="checkbox" id="chkGPIO_FTP_AVI" value="on" onClick="checkDoAction($(this), $('#chkGPIO_Record'));">
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkMD_FTP_TXT" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkMD_FTP_JPG" value="on" onClick="checkDoAction($(this), $('#chkMD_Snapshot'));">
+			</td>
+			<td>
+				<input type="checkbox" id="chkMD_FTP_AVI" value="on" onClick="checkDoAction($(this), $('#chkMD_Record'));">
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkVD_FTP_TXT" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkVD_FTP_JPG" value="on" onClick="checkDoAction($(this), $('#chkVD_Snapshot'));">
+			</td>
+			<td>
+				<input type="checkbox" id="chkVD_FTP_AVI" value="on" onClick="checkDoAction($(this), $('#chkVD_Record'));">
+			</td>
+		</tr>
+		<tr align="center">
+			<td align="left">
+				<input type="button" id="btnDropboxDetails" value="+" align="right">
+				Dropbox
+				<input type="button" id="btnDropboxAuth" value="Allow Access" onClick="window.open('db_doAuth.ncgi', 'Authentication', 'width='+screen.availWidth+',height='+screen.availHeight+',fullscreen=yes,scrollbars=auto');">
+				<table id="tblDropbox">
+					<tr>
+						<td colspan="2"><hr></td>
+					</tr>
+					<tr>
+						<td>Upload Path</td>
+						<td><input type="text" id="teDropboxUploadPath" maxlength="64"></td>
+					</tr>
+					<!--tr>
+						<td colspan="2">
+							<input type="button" id="btnDropboxAuth" value="Allow Access" onClick="window.open('db_doAuth.ncgi', 'Authentication', 'width='+screen.availWidth+',height='+screen.availHeight+',fullscreen=yes,scrollbars=auto');">
+						</td>
+					</tr-->
+					<tr align="right">
+						<td colspan="2">
+							<hr>
+							<input type="button" id="btnApplyDropboxParam" value="Apply">
+							<input type="button" id="btnUndoDropboxParam" value="Undo">
+						</td>
+					</tr>
+				</table>
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkGPIO_Dropbox_TXT" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkGPIO_Dropbox_JPG" value="on" onClick="checkDoAction($(this), $('#chkGPIO_Snapshot'));">
+			</td>
+			<td>
+				<input type="checkbox" id="chkGPIO_Dropbox_AVI" value="on" onClick="checkDoAction($(this), $('#chkGPIO_Record'));">
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkMD_Dropbox_TXT" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkMD_Dropbox_JPG" value="on" onClick="checkDoAction($(this), $('#chkMD_Snapshot'));">
+			</td>
+			<td>
+				<input type="checkbox" id="chkMD_Dropbox_AVI" value="on" onClick="checkDoAction($(this), $('#chkMD_Record'));">
+			</td>
+			<td>
+				X<!--input type="checkbox" id="chkVD_Dropbox_TXT" value="on"-->
+			</td>
+			<td>
+				<input type="checkbox" id="chkVD_Dropbox_JPG" value="on" onClick="checkDoAction($(this), $('#chkVD_Snapshot'));">
+			</td>
+			<td>
+				<input type="checkbox" id="chkVD_Dropbox_AVI" value="on" onClick="checkDoAction($(this), $('#chkVD_Record'));">
+			</td>
+		</tr>
+		<tr align="right">
+			<td colspan="10">
+				<!--input type="button" id="btnApplyAll" value="Apply All"-->
+				<input type="button" id="btnApplyConfigMatrix" value="Apply">
+				<input type="button" id="btnUndoConfigMatrix" value="Undo">
+			</td>
+		</tr>
+	</table>
+	</div>
+</body>
+</html>

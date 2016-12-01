@@ -1,0 +1,17 @@
+#!/bin/sh
+
+PRJ_ROOT_PATH="/mnt/skyeye"
+WIFI_LIST_PATH="/tmp/wifi_list"
+NETWORK_CONF_PATH="/usr/wifi/network.sh"
+
+echo "Content-type: text/html"
+echo ""
+
+if [ -f "$NETWORK_CONF_PATH" ] ; then
+	STA_DEVICE=`awk -F= '{if ($1=="STA_DEVICE") {print $2}}' $NETWORK_CONF_PATH`
+
+	/usr/wifi/iwlist $STA_DEVICE scan | awk -f htdocs/SkyEye/parse-iwlist.awk > "$WIFI_LIST_PATH"
+	echo "0"
+else
+	echo "1"
+fi

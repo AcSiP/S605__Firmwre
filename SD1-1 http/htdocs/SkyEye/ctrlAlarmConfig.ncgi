@@ -1,0 +1,129 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# Read/Write alarm in/out configuration and parameters
+
+eval `/mnt/skyeye/htdocs/proccgi.sh $*`
+
+cfgAlarmConfPath="/mnt/skyeye/etc/alarm.conf"
+cfgAlarmConfigConfPrefix="ALARM_CONFIG"
+
+echo "Content-type: application/json"
+echo ""
+
+if [ "$FORM_doAction" == "read" ] ; then
+	if [ "$FORM_queryMatchPattern" != "" ] && [ "$FORM_queryKey" != "" ] ; then
+		
+		varQueryValue=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix -m $FORM_queryMatchPattern -k $FORM_queryKey`
+		
+cat << EOF
+		{ "RESULT": "$varQueryValue" }
+EOF
+	else
+		# GPIO
+		varGPIO_MISSION=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.GPIO.Mission`
+		varGPIO_MAIL=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.GPIO.SMTP`
+		varGPIO_FTP=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.GPIO.FTP`
+		varGPIO_DROPBOX=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.GPIO.DROPBOX`
+		
+		# Motion Detect of Port 0
+		varMD0_MISSION=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].Mission`
+		varMD0_MAIL=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].SMTP`
+		varMD0_FTP=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].FTP`
+		varMD0_DROPBOX=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].DROPBOX`
+		
+		# Motion Detect of Port 1
+		varMD1_MISSION=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].Mission`
+		varMD1_MAIL=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].SMTP`
+		varMD1_FTP=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].FTP`
+		varMD1_DROPBOX=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0].DROPBOX`
+		
+		# Voice Detect
+		varVD_MISSION=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.VD.Mission`
+		varVD_MAIL=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.VD.SMTP`
+		varVD_FTP=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.VD.FTP`
+		varVD_DROPBOX=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.VD.DROPBOX`
+		
+		#Scheduler
+		varSCH0_MISSION=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.SCHEDULE.[0].Mission`
+		varSCH1_MISSION=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.SCHEDULE.[1].Mission`
+cat << EOF
+		{
+			"GPIO_MISSION":	"$varGPIO_MISSION", 
+			"GPIO_MAIL":	"$varGPIO_MAIL",
+			"GPIO_FTP":		"$varGPIO_FTP",
+			"GPIO_DROPBOX":	"$varGPIO_DROPBOX",
+			"MD0_MISSION":	"$varMD0_MISSION",
+			"MD0_MAIL":		"$varMD0_MAIL",
+			"MD0_FTP":		"$varMD0_FTP",
+			"MD0_DROPBOX":	"$varMD0_DROPBOX",
+			"MD1_MISSION":	"$varMD0_MISSION",
+			"MD1_MAIL":		"$varMD0_MAIL",
+			"MD1_FTP":		"$varMD0_FTP",
+			"MD1_DROPBOX":	"$varMD0_DROPBOX",
+			"VD_MISSION":	"$varVD_MISSION",
+			"VD_MAIL":		"$varVD_MAIL",
+			"VD_FTP":		"$varVD_FTP",
+			"VD_DROPBOX":	"$varVD_DROPBOX",
+			"SCH0_MISSION":	"$varSCH0_MISSION",
+			"SCH1_MISSION":	"$varSCH1_MISSION"
+		}
+EOF
+	fi
+else	# Write config
+	# GPIO
+	varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.GPIO \
+	-v $FORM_GPIO_MISSION \
+	-v $FORM_GPIO_MAIL \
+	-v $FORM_GPIO_FTP \
+	-v $FORM_GPIO_DROPBOX \
+	`
+	
+	# Motion Detect of Port 0
+	varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[0] \
+	-v $FORM_MD0_MISSION \
+	-v $FORM_MD0_MAIL \
+	-v $FORM_MD0_FTP \
+	-v $FORM_MD0_DROPBOX \
+	`
+	
+	# Motion Detect of Port 1
+	varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.MD.[1] \
+	-v $FORM_MD0_MISSION \
+	-v $FORM_MD0_MAIL \
+	-v $FORM_MD0_FTP \
+	-v $FORM_MD0_DROPBOX \
+	`
+	
+	# Voice Detect
+	varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.VD \
+	-v $FORM_VD_MISSION \
+	-v $FORM_VD_MAIL \
+	-v $FORM_VD_FTP \
+	-v $FORM_VD_DROPBOX \
+	`
+	
+	# Schedule 0
+	varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.SCHEDULE.[0].Mission \
+	-v $FORM_SCH0_MISSION
+	`
+	
+	# Schedule 1
+	varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmConfigConfPrefix.Matrix.SCHEDULE.[1].Mission \
+	-v $FORM_SCH1_MISSION
+	`
+	
+	sync
+	
+	if [ "$FORM_btnType" == "Reboot" ] ; then
+		varMsg="Parameters are applied.<br><br>Please wait page refreshed."
+	else
+		varMsg="Parameters are saved."
+	fi
+	
+cat << EOF
+	{"msg": "$varMsg"}
+EOF
+
+fi

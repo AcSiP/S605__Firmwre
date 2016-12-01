@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta http-equiv="cache-control" content="no-cache">
+	<meta http-equiv="expires" content="0">
+	<title>Nuvoton SkyEye RTMP Viewer</title>
+	<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+	<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+	<link type="text/css" href="css-frames-style.css" rel="stylesheet" />
+	<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+	<script type="text/javascript" src="js/nuvoton.js"></script>
+	<script type="text/javascript" src="js/videoParam.js"></script>
+	<script type="text/javascript" src="../flowplayer/flowplayer-3.2.12.min.js"></script>
+
+	<script type="text/javascript">
+	//<![CDATA[
+	var	varViewType		= "h264",
+		varViewPipe		= 0;
+	var varRTMPIntPort	= 1935,
+		varRTMPExtPort	= 1935;
+	var varRTMPPort		= varRTMPIntPort;
+	
+	$.ajaxSetup({
+		type: "POST",
+		headers: { "cache-control": "no-cache" }
+	});
+	
+	$.ajaxSetup({
+		type: "GET",
+		headers: { "cache-control": "no-cache" }
+	});
+	
+	function updateBitrate()
+	{
+		$.get("/server.command?command=get_enc_bitrate&type=h264&pipe=" + varViewPipe)
+		.done(function(data){
+			if(data.value != null && data.value > 0)
+			{
+				$("#h264_bitrate").val(data.value);
+				$("#h264_bitrate").prop("disabled", false);
+				$("#radio_stream_h264").prop("disabled", false);
+			}
+			else
+			{
+				$("#h264_bitrate").prop("disabled", true);
+				$("#radio_stream_h264").prop("disabled", true);
+			}
+		})
+		.fail(function(){
+			console.log("Failed to get H264 bit rate");
+			$("#h264_bitrate").prop("disabled", true);
+			$("#radio_stream_h264").prop("disabled", true);
+		});
+		
+		$.get("server.command?command=get_enc_gop&type=h264&pipe=" + varViewPipe)
+		.done(function(data){
+			if(data.value != null && data.value >= 0)
+			{
+				$("#h264_gop").val(data.value);
+				$("#h264_gop").prop("disabled", false);
+			}
+			else
+			{
+				$("#h264_gop").prop("disabled", true);
+			}
+		})
+		.fail(function(){
+			console.log("Failed to get H264 GOP");
+			$("#h264_gop").prop("disabled", true);
+		});
+	}
+	
+	$.extend({
+		getUrlVars: function(){
+			var vars = [], hash;
+			var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+			for(var i = 0; i < hashes.length; i++)
+			{
+				hash = hashes[i].split('=');
+				vars.push(hash[0]);
+				vars[hash[0]] = hash[1];
+			}
+			return vars;
+		},
+		getUrlVar: function(name){
+			return $.getUrlVars()[name];
+		}
+	});
+	
+	$.get("./ctrlIPChk.ncgi", function(data){
+		if(data == 0)
+			varRTMPPort = varRTMPExtPort;
+	});
+	
+	$(document).ready(function(e){
+		_setBrowser();
+		
+		CreateVideoParam("tagResol", "tagQuality", "tagMaxFPS", varViewType, varViewPipe);
+		CreateVideoExt(null, "tagVideoCtrl", "tagRecFileList", varViewType, varViewPipe);
+		updateBitrate();
+		
+		$("#h264_bitrate").change(function(){
+			$.get("/server.command?command=set_enc_bitrate&type=h264&value=" + $("#h264_bitrate").val() + "&pipe=" + varViewPipe);
+		});
+		
+		$("#h264_gop").change(function(){
+			$.get("/server.command?command=set_enc_gop&type=h264&value=" + $("#h264_gop").val() + "&pipe=" + varViewPipe);
+		});
+	});
+	//]]>
+	</script>
+</head>
+
+<body>
+	<table>
+		<tr>
+			<td><div class="ParamName">Resolution</div></td>
+			<td><div id="tagResol"></div></td>
+			<td>
+				<span class="ParamName">Max FPS</span>
+				<span id="tagMaxFPS"></span>
+			</td>
+			<td>
+				<span class="ParamName">Quality</span>
+				<span id="tagQuality"></span>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="2">
+				<span class="ParamName">GOP</span>
+				<select id="h264_gop">
+					<script type="text/javascript">
+						for(i = 0; i <= 100; i += 1)
+							document.write("<option value=\"" + i + "\">" + i + "</option>");
+					</script>
+				</select>
+				
+				<span class="ParamName">Bitrate</span>
+				<select id="h264_bitrate">
+					<script type="text/javascript">
+						for(i = 1000; i <= 4000; i += 1000)
+							document.write("<option value=\"" + i + "\">" + i + "Kbps</option>");
+					</script>
+				</select>
+			</td>
+			<td><span id="tagVideoCtrl"></span></td>
+			<td><span id="tagRecFileList"></span></td>
+		</tr>
+	</table>
+	<hr>
+	
+	<table>
+		<tr>
+			<td>
+				<iframe id="video_ctrl" frameborder="0" width="0" height="0">Your browser does not support iframe tag.</iframe>
+			</td>
+			<td>
+				<div id="video" style="width:640px;height:480px;margin:0 auto;text-align:center"></div>
+			</td>
+		</tr>
+	</table>
+	
+	<script type="text/javascript">
+	//<![CDATA[
+	$f("video", "../flowplayer/flowplayer-3.2.16.swf", {
+		clip: {
+			url: "flvLiveStream",
+			live: true,
+			autoplay: true,
+			scaling: "fit",
+			// configure clip to use hddn as our provider, referring to our rtmp plugin
+			provider: "hddn"
+		},
+		
+		// streaming plugins are configured under the plugins node
+		plugins: {
+	 
+			// here is our rtmp plugin configuration
+			hddn: {
+				url: "../flowplayer/flowplayer.rtmp-3.2.12.swf",
+	 
+				// netConnectionUrl defines where the streams are found
+				netConnectionUrl: "rtmp://" + window.location.hostname + ":" + varRTMPPort + "/flvplayback"
+			}
+		},
+		canvas: {
+			backgroundGradient: 'none'
+		}
+	});
+	//]]>
+	</script>
+
+</body>
+</html>

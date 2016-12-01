@@ -1,0 +1,56 @@
+#!/bin/sh
+
+eval `/mnt/skyeye/htdocs/proccgi.sh $*`
+
+userConfigPath="/mnt/skyeye/etc/"
+IsAuthorized=`grep -w $FORM_UserID:$FORM_UserPassword $userConfigPath/.skyeye.user`
+
+cd /mnt/skyeye/
+
+echo "Content-type: text/html"
+echo ""
+
+cat << EOF
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	<script type="text/javascript">
+	<!--
+	function createCookie(name, value, days) {
+		if (days) {
+			var date = new Date();
+			date.setTime(date.getTime()+(days*24*60*60*1000));
+			var expires = "; expires="+date.toGMTString();
+		}
+		else var expires = "";
+		document.cookie = name+"="+value+expires+"; path=/";
+	}
+EOF
+
+if [ "$IsAuthorized" != "" ] ; then
+
+cat << EOF
+	createCookie("NuvotonAuthorized", "$FORM_UserID", 1);
+	createCookie("verified_url", "true", 1);
+	createCookie("skyeye_host", "http://" + window.location.host, 1);
+	window.location.href = "menu_dual_stream.html";
+EOF
+
+else
+
+cat << EOF
+	createCookie("NuvotonAuthorized", "", 1);
+	alert("Invalid User ID or password!");
+	window.location.href = "/";
+EOF
+
+fi
+
+cat << EOF
+	-->
+	</script>
+</head>
+<body>
+</body>
+</html>
+EOF

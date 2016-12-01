@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton SkyEye Demo Page</title>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet">
+		<link type="text/css" href="css-frames-style.css" rel="stylesheet" />
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+		<script type="text/javascript" src="js/jquery.jplayer.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		<script type="text/javascript" src="js/videoParam.js"></script>
+
+		<script type="text/javascript">
+		//<![CDATA[
+			var	varViewType		= "jpeg",
+				varViewPipe		= 0;
+			var loaded_time		= new Date();
+			var identify_key	= loaded_time.getTime() % 1000000000;
+			
+			$.ajaxSetup({
+				type: "POST",
+				headers: { "cache-control": "no-cache" }
+			});
+			
+			$.ajaxSetup({
+				type: "GET",
+				headers: { "cache-control": "no-cache" }
+			});
+			
+			$.extend({
+				getUrlVars: function(){
+					var vars = [], hash;
+					var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+					for(var i = 0; i < hashes.length; i++)
+					{
+						hash = hashes[i].split('=');
+						vars.push(hash[0]);
+						vars[hash[0]] = hash[1];
+					}
+					return vars;
+				},
+				getUrlVar: function(name){
+					return $.getUrlVars()[name];
+				}
+			});
+			
+			verifiedUser = verifyUser();
+		
+			if(verifiedUser == "")
+				window.top.location.href = "/";
+
+			$(document).ready(function(e){
+				varViewPipe = $.getUrlVar("pipe");
+				CreateVideoParam("tagResol", "tagQuality", "tagMaxFPS", varViewType, varViewPipe);
+				CreateVideoStatus("tagStatus", true, true, true, true);
+				RefreshStatus(identify_key, true, true, true, true);
+				CreateVideoExt("tagZoom", "tagVideoCtrl", "tagRecFileList", varViewType, varViewPipe);
+			});
+
+		//]]>
+		</script>
+	</head>
+
+	<body>
+		<div id="Info-Dialog"></div>
+		
+		<table>
+			<tr cellpadding="0">
+				<td><div class="ParamName">Resolution</div></td>
+				<td colspan="3"><div id="tagResol"></div></td>
+				<td rowspan="2"><div id="tagStatus"></div></td>
+			</tr>
+			<tr>
+				<td><div class="ParamName">Quality</div></td>
+				<td><div id="tagQuality"></div></td>
+				<td><div class="ParamName">Max-FPS</div></td>
+				<td><div id="tagMaxFPS"></div></td>
+			</tr>
+			<tr>
+				<td><div class="ParamName">Digi-Zoom</div></td>
+				<td colspan="3">
+					<div id="tagZoom"></div>
+				</td>
+				<td>
+					<span id="tagVideoCtrl"></span>
+					<span id="tagRecFileList"></span>
+				</td>
+			</tr>
+		</table>
+		<hr>
+		<table>
+			<tr>
+				<td>
+					<iframe id="video_ctrl" frameborder="0" width="0" height="0">Your browser does not support iframe tag.</iframe>
+				</td>
+				<td>
+					<script type="text/javascript">
+						document.write("<applet id=\"video\" code=\"com.charliemouse.cambozola.Viewer\" archive=\"cambozola.0414.jar\">");
+						document.write("\t<param name=\"url\"  value=\"/server.stream?identify_key=" + identify_key + "&pipe=" + varViewPipe + "\">");
+						document.write("</applet>");
+					</script>
+				</td>
+			</tr>
+		</table>
+		<hr>
+	</body>
+</html>

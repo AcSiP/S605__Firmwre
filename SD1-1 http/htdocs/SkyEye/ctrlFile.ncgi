@@ -1,0 +1,116 @@
+#!/bin/sh
+
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+
+if [ ! "$REQUEST_METHOD" == "POST" ]; then exit 1; fi
+if [ ! $CONTENT_LENGTH -gt 0 ]; then exit 1; fi
+
+UploadFw=/tmp/update
+LockFile=/tmp/skyeye.lock
+
+RetCode=1
+
+echo "Content-type: text/html"
+echo ""
+
+cat << EOF
+<html>
+<body>
+<div align="center">
+EOF
+
+mkdir -p $UploadFw
+
+if [ ! -f "$LockFile" ]; then
+	#To lock
+	echo "0" > $LockFile
+	sync
+
+   if [ ! -f "/mnt/nand1-1/conprog.bin" ]; then  
+#========================== SPI ==========================
+	UD=`df | grep -r $UploadFw | awk '{print $6}'`
+	if [ "$UD" == "$UploadFw" ]; then 
+		/bin/umount  $UploadFw	
+	else
+		if [ -d $UploadFw ]; then rm -rf $UploadFw; fi
+		mkdir -p $UploadFw
+	fi
+
+        mtdskyeye=`awk -F " " '/'"Reserved"'/{print $1}' /proc/mtd`
+        mtdskyeye=`echo $mtdskyeye | sed "s/://"`
+        mtdnumber=`echo $mtdskyeye | sed "s/mtd//"`
+        mtdnumber=`expr $mtdnumber \* 2`
+        /usr/sbin/flash_eraseall -j /dev/mtd$mtdnumber > /dev/null
+	if [ $? == 0 ]; then
+	        mtdskyeyeblock=`echo $mtdskyeye | sed "s/mtd/mtdblock/"`
+	       	/bin/mount -t jffs2 /dev/$mtdskyeyeblock $UploadFw
+	       	if [ $? == 0 ]; then
+	                cat > $UploadFw"/SkyEye.fw"
+	                sync
+	                /usr/mtdtool chksum $UploadFw"/SkyEye.fw" -b > /dev/null
+	                RetCode=$?
+		fi
+	fi
+#========================== SPI ==========================
+   else  
+#========================== NAND ==========================
+	cat > /mnt/nand1-2/SkyEye.fw
+	if [ $? == 0 ]; then
+		sync
+		# Skip http boundary
+		BOUNDARY_STR=$(export | sed '/CONTENT_TYPE/!d;s/^.*dary=//;s/.$//')
+	/mnt/skyeye/bin/RmHttpBoundary -f /mnt/nand1-2/SkyEye.fw -l $CONTENT_LENGTH -b $BOUNDARY_STR -o /mnt/nand1-2/skyeye_upgrade.zip
+		RetCode=$?
+		if [ $RetCode != 0 ]; then 
+			rm -f /mnt/nand1-2/skyeye_upgrade.zip
+		else
+			rm -f /mnt/nand1-2/SkyEye.fw
+		fi
+		sync
+	fi	
+#========================== NAND ==========================
+   fi
+else
+	RetCode=99
+fi
+
+case $RetCode in
+0)
+	echo $RetCode > /mnt/skyeye/update
+	sync
+	sleep 1
+	;;
+99)
+cat << EOF
+        <script type="text/javascript">
+        alert("System locked!");
+        window.location.href = "server_file.html";
+        </script>
+EOF
+	;;
+*)
+cat << EOF
+	<script type="text/javascript">
+	alert("Invalid firmware!");
+	window.location.href = "server_file.html";
+	</script>
+EOF
+	;;
+esac
+
+
+cat << EOF
+</div>
+</body>
+</html>
+EOF
+
+# Unlock
+rm -f $LockFile
+sync
+case $RetCode in
+0)
+        platform=`ls /sys/devices/platform/*-clk/clock`
+        echo "pr" > $platform
+        ;;
+esac

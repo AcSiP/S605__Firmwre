@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+
+eval `/mnt/skyeye/htdocs/proccgi $*`
+
+
+varIsExist=0
+
+if [ -f "$FORM_filePath" ] ; then
+	varIsExist=1
+fi
+
+echo "Content-type: application/json"
+echo ""
+
+cat << EOF
+{"value": "$varIsExist"}
+EOF

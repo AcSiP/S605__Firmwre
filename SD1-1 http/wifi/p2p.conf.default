@@ -1,0 +1,12 @@
+ctrl_interface=/tmp/wpa_supplicant
+ctrl_interface_group=0
+update_config=1
+uuid=12345678-9abc-def0-1234-56789abcdef0
+device_name=Wireless Client
+manufacturer=MediaTek Inc.
+model_name=MTK Wireless Model
+model_number=1.0
+serial_number=1.0
+device_type=10-0050F204-5
+os_version=01020300
+config_methods=display push_button keypad

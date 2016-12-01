@@ -1,0 +1,149 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# Read/Write alarm in parameters
+
+eval `/mnt/skyeye/htdocs/proccgi.sh $*`
+
+cfgAlarmConfPath="/mnt/skyeye/etc/alarm.conf"
+cfgAlarmInConfPrefix="ALARM_IN"
+
+echo "Content-type: application/json"
+echo ""
+
+if [ "$FORM_doAction" == "read" ] ; then
+	
+	case $FORM_ActItem in
+		"SCHEDULE")
+			varSCH0_Enable=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0].Enable`
+			varSCH0_BeginDate=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0].Begin_Date`
+			varSCH0_EndDate=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0].End_Date`
+			varSCH0_Weekly=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0].Weekly`
+			varSCH0_BeginTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0].Begin_Time`
+			varSCH0_EndTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0].End_Time`
+			
+			varSCH1_Enable=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1].Enable`
+			varSCH1_BeginDate=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1].Begin_Date`
+			varSCH1_EndDate=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1].End_Date`
+			varSCH1_Weekly=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1].Weekly`
+			varSCH1_BeginTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1].Begin_Time`
+			varSCH1_EndTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1].End_Time`
+cat << EOF
+			{
+				"SCH0_Enable":		"$varSCH0_Enable",
+				"SCH0_BeginDate":	"$varSCH0_BeginDate",
+				"SCH0_EndDate":		"$varSCH0_EndDate",
+				"SCH0_Weekly":		"$varSCH0_Weekly",
+				"SCH0_BeginTime":	"$varSCH0_BeginTime",
+				"SCH0_EndTime":		"$varSCH0_EndTime",
+				"SCH1_Enable":		"$varSCH1_Enable",
+				"SCH1_BeginDate":	"$varSCH1_BeginDate",
+				"SCH1_EndDate":		"$varSCH1_EndDate",
+				"SCH1_Weekly":		"$varSCH1_Weekly",
+				"SCH1_BeginTime":	"$varSCH1_BeginTime",
+				"SCH1_EndTime":		"$varSCH1_EndTime"
+			}
+EOF
+			;;
+		"GPIO")
+			varGPIO_PollingTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.PollingTime`
+			varGPIO_PinMask=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.PinMask`
+			
+cat << EOF
+			{
+				"GPIO_PolliingTime":	"$varGPIO_PollingTime",
+				"GPIO_PinMask":			"$varGPIO_PinMask"
+			}
+EOF
+			;;
+		"MD")
+			varMD0_BlockDiff=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.MD.CONFIG.[0].BlockDiff`
+			varMD0_FrameDiff=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.MD.CONFIG.[0].FrameDiff`
+			varMD0_ReprieveTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.MD.CONFIG.[0].ReprieveTime`
+			varMD1_BlockDiff=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.MD.CONFIG.[1].BlockDiff`
+			varMD1_FrameDiff=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.MD.CONFIG.[1].FrameDiff`
+			varMD1_ReprieveTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.MD.CONFIG.[1].ReprieveTime`
+cat << EOF
+			{
+				"MD0_BlockDiff":	"$varMD0_BlockDiff",
+				"MD0_FrameDiff":	"$varMD0_FrameDiff",
+				"MD0_ReprieveTime":	"$varMD0_ReprieveTime",
+				"MD1_BlockDiff":	"$varMD1_BlockDiff",
+				"MD1_FrameDiff":	"$varMD1_FrameDiff",
+				"MD1_ReprieveTime":	"$varMD1_ReprieveTime"
+			}
+EOF
+			;;
+		"VD")
+			varVD_SlotDiff=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.SlotDiff`
+			varVD_FrameDiff=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.FrameDiff`
+			varVD_ReprieveTime=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.ReprieveTime`
+			
+cat << EOF
+			{
+				"VD_SlotDiff":		"$varVD_SlotDiff",
+				"VD_FrameDiff":		"$varVD_FrameDiff",
+				"VD_ReprieveTime":	"$varVD_ReprieveTime"
+			}
+EOF
+			;;
+		*)
+			;;
+	esac
+	
+else
+	
+	case $FORM_ActItem in
+		"SCHEDULE")
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0] \
+			-v $FORM_SCH0_Enable \
+			-v $FORM_SCH0_BeginDate \
+			-v $FORM_SCH0_EndDate \
+			-v $FORM_SCH0_Weekly \
+			-v $FORM_SCH0_BeginTime \
+			-v $FORM_SCH0_EndTime \
+			`
+			
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1] \
+			-v $FORM_SCH1_Enable \
+			-v $FORM_SCH1_BeginDate \
+			-v $FORM_SCH1_EndDate \
+			-v $FORM_SCH1_Weekly \
+			-v $FORM_SCH1_BeginTime \
+			-v $FORM_SCH1_EndTime \
+			`
+			;;
+		"GPIO")
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG \
+			-v $FORM_GPIO_PollingTime \
+			-v $FORM_GPIO_PinMask \
+			`
+			;;
+		"MD")
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[0].FrameDiff \
+			-v $FORM_MD0_FrameDiff \
+			`
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.[1].FrameDiff \
+			-v $FORM_MD1_FrameDiff \
+			`
+			;;
+		"VD")
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmInConfPrefix.$FORM_ActItem.CONFIG.FrameDiff \
+			-v $FORM_VD_FrameDiff \
+			`
+			;;
+		*)
+			;;
+	esac
+	
+	sync
+
+cat << EOF
+	{
+		"MSG": "Parameters are set."
+	}
+EOF
+
+	
+fi

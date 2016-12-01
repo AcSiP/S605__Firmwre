@@ -1,0 +1,99 @@
+#!/bin/sh
+
+if [ "`pwd`" == "/" ]; then
+        PRJ_PATH=/mnt/nand1-1
+	PRJ_DEVELOP_PATH=/mnt/nand1-1/   #User defined
+else
+	PRJ_PATH=`pwd`	# For anywhere
+	PRJ_DEVELOP_PATH=`pwd`/DEVPATH/   #User defined
+fi
+
+PRJ_DEVELOP_PATH=/mnt/nand1-1	#User defined
+cd $PRJ_PATH
+
+export PATH="/mnt/skyeye/bin:/mnt/skyeye/sbin:$PRJ_PATH/wifi:$PATH"
+export MSGTOTERMINAL=/dev/console
+export LD_LIBRARY_PATH="/mnt/skyeye/lib:$LD_LIBRARY_PATH"
+
+TS=`cat /proc/uptime | awk '{print $1}'`
+echo -e "\033[1;33m[$TS] init done.\033[m"
+
+#==============================================================================
+#Framebuffer setting
+#Never enter power saving on screen
+if [ "$MSGTOTERMINAL" != "/dev/console" ] ; then
+        echo 0 > /sys/class/graphics/fb0/blank
+	stty -F $MSGTOTERMINAL cs8 115200 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+fi
+
+#==============================================================================
+# Upgrade
+U_F_PATH="$PRJ_DEVELOP_PATH/ /mnt/sdcard/"
+
+for i in $U_F_PATH; do
+	if [ -f $i"skyeye_upgrade.zip" ]; then
+	     cp -af $PRJ_PATH/upgrade.sh          /tmp
+	     chmod +x /tmp/upgrade.sh
+	     sync
+	     /tmp/upgrade.sh $i
+	fi
+done
+#==============================================================================
+
+PRJ_NAME="skyeye"
+PRJ_MP="/mnt/$PRJ_NAME"
+# To mount SKYEYE ROMFS file
+if [ -f $PRJ_PATH/$PRJ_NAME"_romfs.bin" ]; then
+        if [ ! -d $PRJ_MP ]; then mkdir -p $PRJ_MP ; fi
+        mount -t romfs $PRJ_PATH/$PRJ_NAME"_romfs.bin"          $PRJ_MP
+        if [ ! "$?" == "0" ]; then
+                echo "Mount "$PRJ_NAME"_romfs.bin failure."
+	        # Execute SKYEYE on PRJ_DEVELOP_PATH
+	        ln -s $PRJ_DEVELOP_PATH /mnt/skyeye
+        else
+		if [ -d $PRJ_PATH"/etc" ]; then
+			ln -s $PRJ_PATH/etc		/tmp
+		else
+			echo "Configuration folder not exist." >  $MSGTOTERMINAL
+			exit 0
+		fi
+	        df | grep /lib
+	        ret=$?
+	        if [ $ret = 0 ]; then umount /lib; fi  # Mounted
+	fi
+else
+        echo $PRJ_PATH/$PRJ_NAME"_romfs.bin non-exist"
+        echo "Run $PRJ_DEVELOP_PATH"
+	# Execute SKYEYE on PRJ_DEVELOP_PATH
+	ln -s $PRJ_DEVELOP_PATH		/mnt/skyeye  
+        ln -s $PRJ_DEVELOP_PATH/etc	/tmp
+fi
+
+#==============================================================================
+if [ -f $PRJ_PATH"/lib_romfs.bin" ] && [ ! -f $PRJ_PATH/$PRJ_NAME"_romfs.bin" ]; then
+	df | grep /lib
+	ret=$?
+	if [ $ret = 1 ]; then	# not mount
+        	if [ ! -d "/lib" ]; then mkdir /lib; fi
+       		mount -t romfs $PRJ_PATH"/lib_romfs.bin" /lib
+	fi
+else
+	if [ ! -d "/lib" ]; then mkdir /lib; fi
+	cp -a /mnt/skyeye/lib/ld-* /lib
+fi
+
+#==============================================================================
+# setup network configuration
+echo -e "\033[H\033[J" > $MSGTOTERMINAL
+cd $PRJ_PATH
+if ! ./setup_network.sh $PRJ_PATH; then
+        echo "Configuration network setting fail!!" >  $MSGTOTERMINAL
+fi
+
+#===============================================================================
+# Run APP
+# Configure GPIOD 0,1,2,3 as GPIO pins for LED control
+nvtio -w 0xB0000098 0x21230000
+# Execute SKYEYE
+cd /mnt/skyeye
+./go.sh &

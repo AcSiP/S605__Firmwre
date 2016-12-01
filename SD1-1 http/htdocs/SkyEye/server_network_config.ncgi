@@ -1,0 +1,785 @@
+#!/bin/sh
+
+WIFI_LIST_PATH="/tmp/wifi_list"
+
+echo "Content-type: text/html"
+echo ""
+
+cat << EOF
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton SkyEye Network Configuration Page</title>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet">
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+
+		<script type="text/javascript">
+		//<![CDATA[
+		var loaded_time		= new Date();
+		var varCurrFocus	= null;
+		var isSoftAP		= false;
+		
+		verifiedUser = verifyUser();
+		
+		if(verifiedUser == "")
+			window.top.location.href = "/";
+		
+		function updateWirelessConfig(config)
+		{
+			if(config.AP_AUTH_KEY != "")
+			{
+				isSoftAP = true;
+				\$("#teSoftAPAuthKey").val(config.AP_AUTH_KEY);
+				\$("#tblSoftAP").show();
+			}
+			else
+				\$("#tblSoftAP").hide();
+			
+			if(config.AP_SSID != "")
+			{
+				\$("#teSoftAPSSID").val(config.AP_SSID);
+				\$("#teSoftAPSSID").show();
+			}
+			else
+				\$("#teSoftAPSSID").hide();
+			
+			if(config.BOOTPROTO == "DHCP")
+			{
+				\$("#radWifiDHCP").prop("checked", true);
+				\$("#radWifiDHCP").trigger("click");
+				\$("#wifi_ip_addr").hide();
+				\$("#wifi_gateway").hide();
+			}
+			else
+			{
+				\$("#radWifiStatic").prop("checked", true);
+				\$("#radWifiStatic").trigger("click");
+			}
+			
+			\$("#teWifiIPAddr_0").val(config.IPADDR.split('.')[0]);
+			\$("#teWifiIPAddr_1").val(config.IPADDR.split('.')[1]);
+			\$("#teWifiIPAddr_2").val(config.IPADDR.split('.')[2]);
+			\$("#teWifiIPAddr_3").val(config.IPADDR.split('.')[3]);
+			
+			\$("#teWifiGateway_0").val(config.GATEWAY.split('.')[0]);
+			\$("#teWifiGateway_1").val(config.GATEWAY.split('.')[1]);
+			\$("#teWifiGateway_2").val(config.GATEWAY.split('.')[2]);
+			\$("#teWifiGateway_3").val(config.GATEWAY.split('.')[3]);
+			
+			\$("#teWifiSSID").val(config.SSID);
+			\$("#selWifiAuthMode").val(config.AUTH_MODE);
+			\$("#selWifiAuthMode").trigger("change");
+			\$("#selWifiEncryptType").val(config.ENCRYPT_TYPE);
+			\$("#teWifiAuthKey").val(config.AUTH_KEY);
+		}	// updateWirelessConfig
+		
+		function updateWiredConfig(config)
+		{
+			if(config.DEVICE == "eth0")
+			{
+				\$("#radWiredEth").prop("checked", true);
+				\$("#radWiredEth").trigger("click");
+			}
+			else
+			{
+				\$("#radWiredPPPoE").prop("checked", true);
+				\$("#radWiredPPPoE").trigger("click");
+			}
+			
+			if(config.BOOTPROTO == "DHCP")
+			{
+				\$("#radWiredDHCP").prop("checked", true);
+				\$("#radWiredDHCP").trigger("click");
+			}
+			else
+			{
+				\$("#radWiredStatic").prop("checked", true);
+				\$("#radWiredStatic").trigger("click");
+			}
+			
+			\$("#teWiredIPAddr_0").val(config.IPADDR.split('.')[0]);
+			\$("#teWiredIPAddr_1").val(config.IPADDR.split('.')[1]);
+			\$("#teWiredIPAddr_2").val(config.IPADDR.split('.')[2]);
+			\$("#teWiredIPAddr_3").val(config.IPADDR.split('.')[3]);
+			
+			\$("#teWiredGateway_0").val(config.GATEWAY.split('.')[0]);
+			\$("#teWiredGateway_1").val(config.GATEWAY.split('.')[1]);
+			\$("#teWiredGateway_2").val(config.GATEWAY.split('.')[2]);
+			\$("#teWiredGateway_3").val(config.GATEWAY.split('.')[3]);
+			
+			\$("#teWiredUser").val(config.USER);
+			\$("#teWiredPassword").val(config.PASSWD);
+		}	// updateWiredConfig
+		
+		function updatePuncherConfig(config)
+		{
+			\$("#teHTTPIntPort").val(config.InternalPort_0);
+			\$("#teHTTPExtPort").val(config.ExternalPort_0);
+			
+			if(config.InternalPort_1 == "554")
+			{
+				\$("#teRTSPIntPort").val(config.InternalPort_1);
+				\$("#teRTSPExtPort").val(config.ExternalPort_1);
+			}
+			else
+			{
+				\$("#trRTSPIntPort").hide();
+				\$("#trRTSPExtPort").hide();
+			}
+			
+			\$("#teDDNSServer").val(config.Server_0);
+			\$("#teDDNSUsername").val(config.Username_0);
+			\$("#teDDNSPassword").val(config.Password_0);
+			\$("#teDDNSHostname").val(config.Hostname_0);
+		}	// updatePuncherConfig
+		
+		function readWirelessParam()
+		{
+			\$("#Info-Dialog").html("<p>Please wait...</p>");
+			\$("#Info-Dialog").dialog({
+				title: "Network Configuration",
+				modal: true
+			});
+			\$.ajax({
+				url: "param.cgi",
+				type: "GET",
+				async: false,
+				data: {
+					action: "list",
+					group: "wifi"
+				},
+				dataType: "json",
+				error: function(xhr) {
+					\$("#Info-Dialog").html("Failed to read parameters! Please try to refresh page later.");
+				},
+				success: function(data) {
+					updateWirelessConfig(data);
+					
+					\$("#Info-Dialog").dialog("close");
+				}
+			});
+		}	// readWirelessParam
+		
+		function readWiredParam()
+		{
+			\$("#Info-Dialog").html("<p>Please wait...</p>");
+			\$("#Info-Dialog").dialog({
+				title: "Network Configuration",
+				modal: true
+			});
+			\$.ajax({
+				url: "param.cgi",
+				type: "GET",
+				async: false,
+				data: {
+					action: "list",
+					group: "ethernet"
+				},
+				dataType: "json",
+				error: function(xhr) {
+					\$("#Info-Dialog").html("Failed to read parameters! Please try to refresh page later.");
+				},
+				success: function(data) {
+					updateWiredConfig(data);
+					
+					\$("#Info-Dialog").dialog("close");
+				}
+			});
+		}	// readWiredParam
+		
+		function readPuncherParam()
+		{
+			\$("#Info-Dialog").html("<p>Please wait...</p>");
+			\$("#Info-Dialog").dialog({
+				title: "Network Configuration",
+				modal: true
+			});
+			\$.ajax({
+				url: "param.cgi",
+				type: "GET",
+				async: false,
+				data: {
+					action: "list",
+					group: "puncher"
+				},
+				dataType: "json",
+				error: function(xhr) {
+					\$("#Info-Dialog").html("Failed to read parameters! Please try to refresh page later.");
+				},
+				success: function(data) {
+					updatePuncherConfig(data);
+					
+					\$("#Info-Dialog").dialog("close");
+				}
+			});
+		}	// readPuncherParam
+		
+		function writeWirelessParam(e)
+		{
+			if(\$("#selWifiEncryptType").val() == "WEP")
+			{
+				if(\$("#teWifiAuthKey").val().length != 5 && \$("#teWifiAuthKey").val().length != 13 && \$("#teWifiAuthKey").val().length != 16)
+				{
+					alert("Authentication Key is invalid! It has to be string of 5 or 13 or 16 characters.");
+					\$("#teWifiAuthKey").focus();
+					return ;
+				}
+			}
+			
+			if(\$("#selWifiEncryptType").val() == "TKIP" || \$("#selWifiEncryptType").val() == "AES")
+			{
+				if(\$("#teWifiAuthKey").val().length < 8 || \$("#teWifiAuthKey").val().length > 63)
+				{
+					alert("Authentication Key is invalid! It has to be string of 8 to 63 characters.");
+					\$("#teWifiAuthKey").focus();
+					return ;
+				}
+			}
+			
+			varIPAddr = \$("#teWifiIPAddr_0").val() + "." + \$("#teWifiIPAddr_1").val() + "." + \$("#teWifiIPAddr_2").val() + "." + \$("#teWifiIPAddr_3").val();
+			varGateway = \$("#teWifiGateway_0").val() + "." + \$("#teWifiGateway_1").val() + "." + \$("#teWifiGateway_2").val() + "." + \$("#teWifiGateway_3").val();
+			
+			\$(e.target).prop("disabled", true);
+			\$("#Info-Dialog").html("<p>Please wait...</p>");
+			\$("#Info-Dialog").dialog({
+				title: "Network Configuration",
+				modal: true
+			});
+			\$.ajax({
+				url: "param.cgi",
+				type: "GET",
+				data: {
+					action: "update",
+					group: "wifi",
+					BOOTPROTO: \$("input:radio[name=BootProtocol]:checked").val(),
+					IPADDR: varIPAddr,
+					GATEWAY: varGateway,
+					SSID: \$("#teWifiSSID").val(),
+					AUTH_MODE: \$("#selWifiAuthMode").val(),
+					ENCRYPT_TYPE: \$("#selWifiEncryptType").val(),
+					AUTH_KEY: \$("#teWifiAuthKey").val(),
+					AP_SSID: \$("#teSoftAPSSID").val(),
+					AP_AUTH_KEY: \$("#teSoftAPAuthKey").val()
+				},
+				dataType: "json",
+				error: function(xhr) {
+					\$("#Info-Dialog").html("Failed to write parameters! Please try to refresh page later.");
+					
+					\$(e.target).prop("disabled", false);
+				},
+				success: function(response) 
+				{
+					if(\$(e.target).val() == "Reboot")
+					{
+						\$.get("/restart.cgi");
+						\$('#Info-Dialog').html("<p>Please wait for SkyEye to reboot</p>");
+						setTimeout("window.location.reload()", 40000);
+					}
+					else
+					{
+						readWirelessParam();
+						\$(e.target).prop("disabled", false);
+					}
+				}
+			});
+		}	// writeWirelessParam
+		
+		function writeWiredParam(e)
+		{
+			varIPAddr = \$("#teWiredIPAddr_0").val() + "." + \$("#teWiredIPAddr_1").val() + "." + \$("#teWiredIPAddr_2").val() + "." + \$("#teWiredIPAddr_3").val();
+			varGateway = \$("#teWiredGateway_0").val() + "." + \$("#teWiredGateway_1").val() + "." + \$("#teWiredGateway_2").val() + "." + \$("#teWiredGateway_3").val();
+			
+			\$(e.target).prop("disabled", true);
+			\$("#Info-Dialog").html("<p>Please wait...</p>");
+			\$("#Info-Dialog").dialog({
+				title: "Network Configuration",
+				modal: true
+			});
+			
+			varParams = "action=update&group=ethernet" + 
+					"&DEVICE=" + \$("input:radio[name=WiredDevice]:checked").val() + 
+					"&BOOTPROTO=" + \$("input:radio[name=WiredBootProtocol]:checked").val() + 
+					"&IPADDR=" + varIPAddr +
+					"&GATEWAY=" + varGateway + 
+					"&USER=" + \$("#teWiredUser").val() +
+					"&PASSWD=" + \$("#teWiredPassword").val();
+			
+			\$.get("/param.cgi?" + varParams)
+			.done(function(data){
+				if(\$(e.target).val() == "Reboot")
+				{
+					\$.get("/restart.cgi");
+					\$('#Info-Dialog').html(data.msg + "<br><p>Please wait for SkyEye to reboot and try to reconnect it later.</p>");
+					setTimeout("window.location.reload()", 40000);
+				}
+				else
+				{
+					readWiredParam();
+					\$(e.target).prop("disabled", false);
+				}
+			})
+			.fail(function(){
+				\$("#Info-Dialog").html("Failed to write parameters! Please try to refresh page later.");
+				\$(e.target).prop("disabled", false);
+			});
+		}	// writeWiredParam
+		
+		function writePuncherParam(e)
+		{
+			\$(e.target).prop("disabled", true);
+			\$("#Info-Dialog").html("<p>Please wait...</p>");
+			\$("#Info-Dialog").dialog({
+				title: "Network Configuration",
+				modal: true
+			});
+			
+			varParams = "action=update&group=puncher" + 
+					"&Puncher.Holes.[0].InternalPort=" + \$("#teHTTPIntPort").val() + 
+					"&Puncher.Holes.[0].ExternalPort=" + \$("#teHTTPExtPort").val();
+			if(\$("#trRTSPIntPort").is(":visible"))
+			{
+			varParams = varParams + 
+					"&Puncher.Holes.[1].InternalPort=" + \$("#teRTSPIntPort").val() + 
+					"&Puncher.Holes.[1].ExternalPort=" + \$("#teRTSPExtPort").val();
+			}
+			
+			varParams = varParams + 
+					"&Puncher.DDNS.[0].Server=" + \$("#teDDNSServer").val() +
+					"&Puncher.DDNS.[0].Username=" + \$("#teDDNSUsername").val() + 
+					"&Puncher.DDNS.[0].Password=" + \$("#teDDNSPassword").val() +
+					"&Puncher.DDNS.[0].Hostname=" + \$("#teDDNSHostname").val();
+			
+			\$.get("/param.cgi?" + varParams)
+			.done(function(data){
+				if(\$(e.target).val() == "Reboot")
+				{
+					\$.get("/restart.cgi");
+					\$('#Info-Dialog').html("<p>Please wait for SkyEye to reboot and try to reconnect it</p>");
+					setTimeout("window.location.reload()", 40000);
+				}
+				else
+				{
+					readPuncherParam();
+					\$(e.target).prop("disabled", false);
+				}
+			})
+			.fail(function(){
+				\$("#Info-Dialog").html("Failed to write parameters! Please try to refresh page later.");
+				\$(e.target).prop("disabled", false);
+			});
+		}	// writePuncherParam
+		
+		function AddrInput(
+			CurrFocus,
+			NextFocus, 
+			SyncColumn
+		)
+		{
+			if(CurrFocus == null)
+				return ;
+			
+			if(CurrFocus != varCurrFocus)
+				return ;
+			
+			if(CurrFocus.value.length == 3)
+			{
+				if(NextFocus != null)
+					NextFocus.click();
+			}
+			
+			//if(SyncColumn != null)
+			//	SyncColumn.val(CurrFocus.value);
+		}
+
+		\$(document).ready(function(e){
+			\$("#hideAuthMode").hide();
+			\$("#hideEncryptType").hide();
+			readWirelessParam();
+			readPuncherParam();
+			
+			\$("#btnNetworkSave, #btnNetworkReboot").click(function(evt)
+			{
+				if(\$("#selNetwork").val() == "WirelessNetwork")
+					writeWirelessParam(evt);
+				else
+					writeWiredParam(evt);
+			});
+			
+			\$("#btnNetworkDiscard").click(function()
+			{
+				if(\$("#selNetwork").val() == "WirelessNetwork")
+				{
+					readWirelessParam();
+					\$("#selWifiSSID")[0].selectedIndex = 0;
+				}
+				else
+					readWiredParam();
+			});
+			
+			\$("#btnPuncherSave, #btnPuncherReboot").click(writePuncherParam);
+			\$("#btnPuncherDiscard").click(readPuncherParam);
+			
+			\$("#radWifiDHCP, #radWiredDHCP").click(function(){
+				if(\$("#selNetwork").val() == "WirelessNetwork")
+				{
+					\$("#wifi_ip_addr").hide();
+					\$("#wifi_gateway").hide();
+				}
+				else
+				{
+					\$("#wired_ip_addr").hide();
+					\$("#wired_gateway").hide();
+				}
+			});
+		
+			\$("#radWifiStatic, #radWiredStatic").click(function()
+			{
+				if(\$("#selNetwork").val() == "WirelessNetwork")
+				{
+					\$("#wifi_ip_addr").show();
+					\$("#wifi_gateway").show();
+				}
+				else
+				{
+					\$("#wired_ip_addr").show();
+					\$("#wired_gateway").show();
+				}
+			});
+			
+			\$("#selWifiAuthMode").change(function()
+			{
+				varAuthMode = \$("#selWifiAuthMode").val();
+				
+				if(varAuthMode == "OPEN" || varAuthMode == "SHARED"  || varAuthMode == "WEPAUTO")
+				{
+					\$("#selWifiEncryptType option[value=NONE]").show();
+					\$("#selWifiEncryptType option[value=WEP]").show();
+					\$("#selWifiEncryptType option[value=TKIP]").hide();
+					\$("#selWifiEncryptType option[value=AES]").hide();
+					\$("#selWifiEncryptType").val("WEP");
+				}
+				else
+				{
+					\$("#selWifiEncryptType option[value=NONE]").hide();
+					\$("#selWifiEncryptType option[value=WEP]").hide();
+					\$("#selWifiEncryptType option[value=TKIP]").show();
+					\$("#selWifiEncryptType option[value=AES]").show();
+					\$("#selWifiEncryptType").val("AES");
+				}	
+			});
+			
+			\$("#selNetwork").change(function()
+			{
+				varNetwork = \$("#selNetwork").val();
+				
+				if(varNetwork == "WirelessNetwork")
+				{
+					\$("#WirelessNetwork").show();
+					\$("#WiredNetwork").hide();
+					readWirelessParam();
+				}
+				else
+				{
+					\$("#WirelessNetwork").hide();
+					\$("#WiredNetwork").show();
+					readWiredParam();
+				}
+			});
+			
+			\$("#radWiredEth").click(function()
+			{
+				\$("#wired_pppoe_user").hide();
+				\$("#wired_pppoe_password").hide();
+				\$("#wired_boot_proto").show();
+			});
+			
+			\$("#radWiredPPPoE").click(function()
+			{
+				\$("#wired_pppoe_user").show();
+				\$("#wired_pppoe_password").show();
+				\$("#radWiredDHCP").prop("checked", true);
+				\$("#radWiredDHCP").trigger("click");
+				\$("#wired_boot_proto").hide();
+			});
+			
+			\$("#selWifiSSID").change(function(){
+				\$("#teWifiSSID").val(\$("#selWifiSSID").val());
+				
+				if(\$("#selWifiSSID")[0].selectedIndex > 0)
+				{
+					\$("#hide_selWifiAuthMode")[0].selectedIndex = \$("#selWifiSSID")[0].selectedIndex;
+					\$("#hide_selWifiAuthMode").trigger("change");
+					\$("#selWifiAuthMode").val(\$("#hide_selWifiAuthMode").val());
+					\$("#selWifiAuthMode").trigger("change");
+					
+					\$("#hide_selWifiEncryptType")[0].selectedIndex = \$("#selWifiSSID")[0].selectedIndex;
+					\$("#selWifiEncryptType").val(\$("#hide_selWifiEncryptType").val());
+				}
+			});
+			
+			\$("#hide_selWifiAuthMode").change(function(){
+				if(\$("#hide_selWifiAuthMode").val() == "OPEN")
+					\$("#teAuthKey").attr("disabled", true);
+				else
+					\$("#teAuthKey").attr("disabled", false);
+			});
+		});	// \$(document).ready
+
+		//]]>
+		</script>
+	</head>
+
+	<body>
+		<div id="Info-Dialog"></div>
+		<table border="1" cellspacing="0" width="480">
+			<tr bgcolor="#D0D0D0">
+				<td>
+				<select id="selNetwork">
+					<option value="WirelessNetwork">Wireless Network</option>
+					<option value="WiredNetwork">Wired Network</option>
+				</select>
+				</td>
+			</tr>
+			<tr><td>
+		<table id="WirelessNetwork">
+		<tr>
+			<td>Boot Protocol</td>
+			<td>
+				<input type="radio" id="radWifiDHCP" name="BootProtocol" value="DHCP">DHCP</input>
+				<span>   </span>
+				<input type="radio" id="radWifiStatic" name="BootProtocol" value="STATIC">Static</input>
+			</td>
+		</tr>
+		<tr id="wifi_ip_addr">
+			<td>IP Address</td>
+			<td>
+				<input type="text" id="teWifiIPAddr_0" size="3" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, \$('#teWifiIPAddr_1'), \$('#teWifiGateway_0'))" onkeydown="varCurrFocus=this;" />.
+				<input type="text" id="teWifiIPAddr_1" size="3" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, \$('#teWifiIPAddr_2'), \$('#teWifiGateway_1'))" onkeydown="varCurrFocus=this;" />.
+				<input type="text" id="teWifiIPAddr_2" size="3" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, \$('#teWifiIPAddr_3'), \$('#teWifiGateway_2'))" onkeydown="varCurrFocus=this;" />.
+				<input type="text" id="teWifiIPAddr_3" size="3" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, null, \$('#teWifiGateway_3'))" onkeydown="varCurrFocus=this;" />
+			</td>
+		</tr>
+		<tr id="wifi_gateway">
+			<td>Gateway</td>
+			<td>
+				<input type="text" id="teWifiGateway_0" size="3" maxlength="3" onclick="this.select()" onkeyup="if(this.value.length==3) {\$('#teWifiGateway_1').click();}" />.
+				<input type="text" id="teWifiGateway_1" size="3" maxlength="3" onclick="this.select()" onkeyup="if(this.value.length==3) {\$('#teWifiGateway_2').click();}" />.
+				<input type="text" id="teWifiGateway_2" size="3" maxlength="3" onclick="this.select()" onkeyup="if(this.value.length==3) {\$('#teWifiGateway_3').click();}" />.
+				<input type="text" id="teWifiGateway_3" size="3" maxlength="3" />
+			</td>
+		</tr>
+EOF
+		if [ -f "$WIFI_LIST_PATH" ] ; then
+cat << EOF
+		<tr>
+			<td>Scanned SSID</td>
+			<td>
+				<select id="selWifiSSID">
+					<option value=""></option>
+EOF
+				awk -F# '{ print "<option value=\"" $1 "\">" $1 "</option>" }' "$WIFI_LIST_PATH"
+cat << EOF
+				</select>
+			</td>
+		</tr>
+		<tr id="hideAuthMode">
+			<td>Auth Mode</td>
+			<td>
+				<select id="hide_selWifiAuthMode" disabled>
+					<option value=""></option>
+EOF
+				awk -F# '{ print "<option value=\"" $2 "\">" $2 "</option>" }' "$WIFI_LIST_PATH"
+cat << EOF
+				</select>
+			</td>
+		</tr>
+		<tr id="hideEncryptType">
+			<td>Encrypt Type</td>
+			<td>
+				<select id="hide_selWifiEncryptType" disabled>
+					<option value=""></option>
+EOF
+				awk -F# '{ print "<option value=\"" $3 "\">" $3 "</option>" }' "$WIFI_LIST_PATH"
+cat << EOF
+				</select>
+			</td>
+		</tr>
+EOF
+		fi
+cat << EOF
+		<tr>
+			<td>SSID</td>
+			<td><input type="text" id="teWifiSSID" /></td>
+		</tr>
+		<tr>
+			<td>Authentication Mode</td>
+			<td>
+				<select id="selWifiAuthMode">
+					<option value="OPEN">OPEN</option>
+					<option value="SHARED">SHARED</option>
+					<option value="WPAPSK">WPAPSK</option>
+					<option value="WPA2PSK">WPA2PSK</option>
+					<!--option value="WEPAUTO">WEPAUTO</option>
+					<option value="WPANONE">WPANONE</option-->
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td>Encrypt Type</td>
+			<td>
+				<select id="selWifiEncryptType">
+					<option value="NONE">NONE</option>
+					<option value="WEP">WEP</option>
+					<option value="TKIP">TKIP</option>
+					<option value="AES">AES</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td>Authentication Key</td>
+			<td><input type="input" id="teWifiAuthKey" /></td>
+		</tr>
+		<tbody id="tblSoftAP">
+		<tr>
+			<td>Soft AP SSID</td>
+			<td><input type="input" id="teSoftAPSSID" /></td>
+		</tr>
+		<tr>
+			<td>Soft AP Authentication Key</td>
+			<td><input type="input" id="teSoftAPAuthKey" /></td>
+		</tr>
+		</tbody>
+		</table>
+		<table id="WiredNetwork" width="100%" style="display:none">
+		<tr>
+			<td>Network Type</td>
+			<td>
+				<input type="radio" id="radWiredEth" name="WiredDevice" value="eth0">Ethernet</input>
+				<span>   </span>
+				<input type="radio" id="radWiredPPPoE" name="WiredDevice" value="ppp0">PPPoE</input>
+			</td>
+		</tr>
+		<tr id="wired_boot_proto">
+			<td>Boot Protocol</td>
+			<td>
+				<input type="radio" id="radWiredDHCP" name="WiredBootProtocol" value="DHCP">DHCP</input>
+				<span>   </span>
+				<input type="radio" id="radWiredStatic" name="WiredBootProtocol" value="STATIC">Static</input>
+			</td>
+		</tr>
+		<tr id="wired_ip_addr">
+			<td>IP Address</td>
+			<td>
+				<input type="text" id="teWiredIPAddr_0" size="1" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, \$('#teWiredIPAddr_1'), \$('#teWiredGateway_0'))" onkeydown="varCurrFocus=this;" />.
+				<input type="text" id="teWiredIPAddr_1" size="1" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, \$('#teWiredIPAddr_2'), \$('#teWiredGateway_1'))" onkeydown="varCurrFocus=this;" />.
+				<input type="text" id="teWiredIPAddr_2" size="1" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, \$('#teWiredIPAddr_3'), \$('#teWiredGateway_2'))" onkeydown="varCurrFocus=this;" />.
+				<input type="text" id="teWiredIPAddr_3" size="1" maxlength="3" onclick="this.select()" onkeyup="AddrInput(this, null, \$('#teWiredGateway_3'))" onkeydown="varCurrFocus=this;" />
+			</td>
+		</tr>
+		<tr id="wired_gateway">
+			<td>Gateway</td>
+			<td>
+				<input type="text" id="teWiredGateway_0" size="1" maxlength="3" onclick="this.select()" onkeyup="if(this.value.length==3) {\$('#teWiredGateway_1').click();}" />.
+				<input type="text" id="teWiredGateway_1" size="1" maxlength="3" onclick="this.select()" onkeyup="if(this.value.length==3) {\$('#teWiredGateway_2').click();}" />.
+				<input type="text" id="teWiredGateway_2" size="1" maxlength="3" onclick="this.select()" onkeyup="if(this.value.length==3) {\$('#teWiredGateway_3').click();}" />.
+				<input type="text" id="teWiredGateway_3" size="1" maxlength="3" />
+			</td>
+		</tr>
+		<tr id="wired_pppoe_user">
+			<td>User</td>
+			<td><input type="text" id="teWiredUser" /></td>
+		</tr>
+		<tr id="wired_pppoe_password">
+			<td>Password</td>
+			<td><input type="input" id="teWiredPassword" /></td>
+		</tr>
+		
+		</table>
+			</td></tr>
+			<tr>
+			<td colspan="2" align="right">
+				<input type="button" id="btnNetworkSave" value="Save" />
+				<input type="button" id="btnNetworkDiscard" value="Discard" />
+				<input type="button" id="btnNetworkReboot" value="Reboot" />
+			</td>
+		</tr>
+		<!--/table>
+		
+		<table border="1" cellspacing="0"-->
+		<tr><td></td></tr>
+		<tr><td>
+		<table width="100%">
+			<tr bgcolor="#D0D0D0">
+				<td colspan="2"><b>UPnP</b> - <a href="http://en.wikipedia.org/wiki/Universal_Plug_and_Play" target="_blank">What is UPnP</a></td>
+			</tr>
+			<tr>
+				<td>HTTP Internal Port</td>
+				<td>
+					<input type="text" id="teHTTPIntPort" maxlength="5" disabled />
+				</td>
+			</tr>
+			<tr>
+				<td>HTTP External Port</td>
+				<td>
+					<input type="text" id="teHTTPExtPort" maxlength="5" />
+				</td>
+			</tr>
+			<tr id="trRTSPIntPort">
+				<td>RTSP Internal Port</td>
+				<td>
+					<input type="text" id="teRTSPIntPort" maxlength="5" disabled />
+				</td>
+			</tr>
+			<tr id="trRTSPExtPort">
+				<td>RTSP External Port</td>
+				<td>
+					<input type="text" id="teRTSPExtPort" maxlength="5" />
+				</td>
+			</tr>
+			<tr bgcolor="#D0D0D0">
+				<td colspan="2"><b>DDNS</b> - <a href="http://www.no-ip.com/newUser.php" target="_blank">Go No-IP Registeration</a></td>
+			</tr>
+			<tr>
+				<td>Server</td>
+				<td>
+					<input type="text" id="teDDNSServer" />
+				</td>
+			</tr>
+			<tr>
+				<td>Username</td>
+				<td>
+					<input type="text" id="teDDNSUsername" />
+				</td>
+			</tr>
+			<tr>
+				<td>Password</td>
+				<td>
+					<input type="password" id="teDDNSPassword" />
+				</td>
+			</tr>
+			<tr>
+				<td>Hostname</td>
+				<td>
+					<input type="text" id="teDDNSHostname" />
+				</td>
+			</tr>
+		</table>
+		</td></tr>
+		<tr>
+			<td colspan="2" align="right">
+				<input type="button" id="btnPuncherSave" value="Save" />
+				<input type="button" id="btnPuncherDiscard" value="Discard" />
+				<input type="button" id="btnPuncherReboot" value="Reboot" />
+			</td>
+		</tr>
+		</table>
+	</body>
+</html>
+EOF

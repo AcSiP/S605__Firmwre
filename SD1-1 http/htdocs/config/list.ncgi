@@ -1,0 +1,139 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# List configuration parameters
+
+eval `/mnt/skyeye/htdocs/proccgi $*`
+
+CONF_PATH="/mnt/skyeye/etc"
+
+echo "Content-type: text/html"
+echo ""
+
+cat << EOF
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Nuvoton SkyEye Configuration Page</title>
+	<script type="text/javascript">
+	//<![CDATA[
+	function Save(strConfName)
+	{
+		var tagElem = document.getElementById(strConfName);
+		tagElem.submit();
+	}
+	
+	function Discard(strConfName)
+	{
+		window.location.reload();
+	}
+	
+	function RestoreDefault(strConfName)
+	{
+		var tagElem = document.getElementById(strConfName);
+		tagElem.submit();
+	}
+	
+	function Reboot()
+	{
+		window.location = "/restart.cgi";
+	}
+	//]]>
+	</script>
+</head>
+<body>
+<table>
+<tr><td>
+EOF
+
+TABLE_COL_CNT="3"
+
+case "$FORM_type" in
+"loader")
+	CONF_FILE_LIST="msloader"
+;;
+"network")
+	CONF_FILE_LIST=$FORM_name
+;;
+"plugin")
+	CONF_PATH=$CONF_PATH"/plugin"
+	
+	if [ "$FORM_name" != "" ] ; then
+		CONF_FILE_LIST=$FORM_name
+	else
+		CONF_FILE_LIST=`ls /mnt/skyeye/lib/skyeye`
+	fi
+;;
+esac
+
+for CONF_FILE in $CONF_FILE_LIST
+do
+	if [ "$FORM_type" == "plugin" ] && [ "$FORM_name" == "" ] ; then
+		CONF_TITLE=`echo $CONF_FILE | awk -F. 'sub(/plugin_/,""){ print $1 }'`
+		TITLE_HTML="<a href=\"list.ncgi?type=plugin&name=$CONF_TITLE\" target=\"_edit\">$CONF_TITLE</a>"
+	else
+		CONF_TITLE=$CONF_FILE
+		TITLE_HTML=$CONF_TITLE
+	fi
+	
+	FILENAME=$CONF_TITLE".conf"
+	
+	if [ ! -f "$CONF_PATH"/"$FILENAME" ] ; then
+		# Plugin might be disabed and try to search file prefix with "_"
+		FILENAME="_"$CONF_TITLE".conf"
+		
+		if [ "$TITLE_HTML" == "$CONF_TITLE" ] ; then
+			TITLE_HTML=$CONF_TITLE" - Enabled <input type=\"checkbox\" name=\"chkEnabled\" value=\"1\">"
+		else
+			TITLE_HTML=$TITLE_HTML" <b style=\"color:red\">is disabled</b>"
+		fi
+	else
+		if [ "$TITLE_HTML" == "$CONF_TITLE" ] ; then
+			TITLE_HTML=$CONF_TITLE" - Enabled <input type=\"checkbox\" name=\"chkEnabled\" value=\"1\" checked>"
+		else
+			TITLE_HTML=$TITLE_HTML" is enabled"
+		fi
+	fi
+	
+	if [ -f "$CONF_PATH"/"$FILENAME" ] ; then
+cat << EOF
+		<form id="$CONF_TITLE" action="update.ncgi">
+		<input type="hidden" name="type" value="$FORM_type">
+		<input type="hidden" name="filename" value="$CONF_TITLE">
+		<table id="tblConfig_'$CONF_TITLE'" width="100%" cellspacing="0">
+		<tr bgcolor="#D0D0D0">
+			<td colspan="$TABLE_COL_CNT">$TITLE_HTML</td>
+		</tr>
+		<tr align="center"><td colspan="$TABLE_COL_CNT"><hr></td></tr>
+EOF
+		if [ "$FORM_type" == "plugin" ] && [ "$FORM_name" == "" ] ; then
+			#awk -F\" '!/^($|#)/{ print "<tr><td>" $4 "</td><td><input type=\"text\" name=\"" $4 "\" value=\"" $6 "\" disabled></td><td>" $8 "</td></tr>" }' "$CONF_PATH"/"$FILENAME"
+			awk -F"[=#]" '!/^($|#)/{ print "<tr><td>" $1 "</td><td><input type=\"text\" name=\"" $1 "\" value=\"" $2 "\" disabled></td><td>" $3 "</td></tr>" }' "$CONF_PATH"/"$FILENAME"
+		else
+			#awk -F\" '!/^($|#)/{ print "<tr><td>" $4 "</td><td><input type=\"text\" name=\"" $4 "\" value=\"" $6 "\"></td><td>" $8 "</td></tr>" }' "$CONF_PATH"/"$FILENAME"
+			awk -F"[=#]" '!/^($|#)/{ print "<tr><td>" $1 "</td><td><input type=\"text\" name=\"" $1 "\" value=\"" $2 "\"></td><td>" $3 "</td></tr>" }' "$CONF_PATH"/"$FILENAME"
+cat << EOF
+		<tr align="center"><td colspan="$TABLE_COL_CNT"><hr></td></tr>
+		<tr align="right">
+		<td colspan="$TABLE_COL_CNT">
+			<input type="submit" name="btnAction" value="Save" onClick="Save('$CONF_TITLE')">
+			<input type="button" name="btnAction" value="Discard" onClick="Discard('$CONF_TITLE')">
+			<input type="submit" name="btnAction" value="Restore Default" onClick="RestoreDefault('$CONF_TITLE')">
+			<input type="submit" name="btnAction" value="Reboot" onClick="Reboot()">
+		</td>
+		</tr>
+EOF
+		fi
+cat << EOF
+		</table>
+		</form>
+		<hr>
+EOF
+	fi
+done
+
+cat << EOF
+</body>
+</html>
+EOF

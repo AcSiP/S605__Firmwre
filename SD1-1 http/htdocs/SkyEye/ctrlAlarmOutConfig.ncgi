@@ -1,0 +1,108 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# Read/Write alarm out parameters
+
+eval `/mnt/skyeye/htdocs/proccgi.sh $*`
+
+cfgAlarmConfPath="/mnt/skyeye/etc/alarm.conf"
+cfgAlarmOutConfPrefix="ALARM_OUT"
+
+echo "Content-type: application/json"
+echo ""
+
+if [ "$FORM_doAction" == "read" ] ; then
+	
+	case $FORM_ActItem in
+		"GPIO")
+			;;
+		"SMTP")
+			varMAIL_HOST=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Host`
+			varMAIL_PORT=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Port`
+			varMAIL_RECEIVER=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].MailTo`
+			varMAIL_ACCOUNT=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Username`
+			varMAIL_PASSWORD=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Password`
+			varMAIL_SUBJECT=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Subject`
+			varMAIL_CONTENT=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Body`
+			
+cat << EOF
+		{
+			"MAIL_HOST": "$varMAIL_HOST",
+			"MAIL_PORT": "$varMAIL_PORT",
+			"MAIL_RECEIVER": "$varMAIL_RECEIVER",
+			"MAIL_ACCOUNT": "$varMAIL_ACCOUNT",
+			"MAIL_PASSWORD": "$varMAIL_PASSWORD",
+			"MAIL_SUBJECT": "$varMAIL_SUBJECT",
+			"MAIL_CONTENT": "$varMAIL_CONTENT"
+		}
+EOF
+			;;
+		"FTP")
+			varFTP_HOST=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Host`
+			varFTP_PORT=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Port`
+			varFTP_USERNAME=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Username`
+			varFTP_PASSWORD=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].Password`
+			varFTP_REMOTE_PATH=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].RemotePath`
+			
+cat << EOF
+		{
+			"FTP_HOST": "$varFTP_HOST",
+			"FTP_PORT": "$varFTP_PORT",
+			"FTP_USERNAME": "$varFTP_USERNAME",
+			"FTP_PASSWORD": "$varFTP_PASSWORD",
+			"FTP_REMOTE_PATH": "$varFTP_REMOTE_PATH"
+		}
+EOF
+			;;
+		"DROPBOX")
+			varDROPBOX_REMOTE_PATH=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].RemotePath`
+			
+cat << EOF
+		{
+			"DROPBOX_REMOTE_PATH": "$varDROPBOX_REMOTE_PATH"
+		}
+EOF
+			;;
+		*)
+			;;
+	esac
+	
+else
+	
+	case $FORM_ActItem in
+		"GPIO")
+			;;
+		"SMTP")
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0] \
+			-v $FORM_MAIL_HOST \
+			-v $FORM_MAIL_PORT \
+			-v $FORM_MAIL_RECEIVER \
+			-v $FORM_MAIL_ACCOUNT \
+			-v $FORM_MAIL_PASSWORD \
+			-v "$FORM_MAIL_SUBJECT" \
+			-v "$FORM_MAIL_CONTENT" \
+			`
+			;;
+		"FTP")
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0] \
+			-v $FORM_FTP_HOST \
+			-v $FORM_FTP_PORT \
+			-v $FORM_FTP_USERNAME \
+			-v $FORM_FTP_PASSWORD \
+			-v $FORM_FTP_REMOTE_PATH \
+			`
+			;;
+		"DROPBOX")
+			varResult=`/mnt/skyeye/bin/config -f $cfgAlarmConfPath -p $cfgAlarmOutConfPrefix.$FORM_ActItem.[0].RemotePath -v $FORM_DROPBOX_REMOTE_PATH`
+			;;
+		*)
+			;;
+	esac
+	
+	sync
+
+cat << EOF
+	{"msg": "Parameters are saved."}
+EOF
+fi

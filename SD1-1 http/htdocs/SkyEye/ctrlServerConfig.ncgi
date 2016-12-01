@@ -1,0 +1,52 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# Read/Write server parameters
+
+eval `/mnt/skyeye/htdocs/proccgi.sh $*`
+
+cfgServerConfPath="/mnt/skyeye/etc/msloader.conf"
+
+echo "Content-type: application/json"
+echo ""
+
+varTIME_ZONE=`awk -F"[=#]" '$1 == "Time_Zone"{ print $2}' $cfgServerConfPath`
+
+if [ "$FORM_doAction" == "read" ] ; then
+
+	varDATE=`date +%Y/%m/%d`
+	varHOUR=`date +%H`
+	varMINUTE=`date +%M`
+	varSECOND=`date +%S`
+	
+cat << EOF
+	{
+		"DATE": "$varDATE",
+		"HOUR": "$varHOUR",
+		"MINUTE": "$varMINUTE",
+		"SECOND": "$varSECOND",
+		"TIME_ZONE": "$varTIME_ZONE"
+	}
+EOF
+
+else
+
+	varDATE=`date -s "$FORM_Date$FORM_Hour$FORM_Minute.$FORM_Second"`
+	
+	if [ "$varTIME_ZONE" != "$FORM_TimeZone" ] ; then
+		sed -i "/Time_Zone/s|$varTIME_ZONE|$FORM_TimeZone|" "$cfgServerConfPath"
+		echo $FORM_TimeZone > /etc/TZ
+	fi
+	
+	sync
+	
+	varDATE=`date`
+
+cat << EOF
+	{
+		"MSG": "Server date/time is set as $varDATE"
+	}
+EOF
+	
+fi

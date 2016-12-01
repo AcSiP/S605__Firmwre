@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta http-equiv="cache-control" content="no-cache">
+	<meta http-equiv="expires" content="0">
+	<title>Nuvoton SkyEye Firmware Page</title>
+	<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+	<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="css-frames-style.css" />
+	<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+	<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+	<script type="text/javascript" src="js/nuvoton.js"></script>
+	
+	<script type="text/javascript">
+	//<![CDATA[
+	var changedFlag			= false;
+	var updateFlag			= true;
+	var eMJPG				= 0,
+		eH264				= 1,
+		ePluginValid		= 0,
+		eAudioFmtIdx		= 1,
+		eVideoFmtIdx		= 2,
+		eFileFmtIdx			= 3;
+	var aVideoResol			= [ "160x120", "320x240", "640x480", "1280x720" ];
+	var aRecorderConfig		= [ true, "", "", "" ];
+	var aaRtspConfig		= [[ true, "" ], [ true, "" ]];
+	var aRtspVideoFmt		= [ "mjpg", "h264" ];
+	var aRtspAudioFmt		= [ "alaw", "ulaw", "aac" ];			// dvi option is hided
+	var aRecorderMediaFmt	= [ "avi", "mp4" ];
+	var aRecorderVideoFmt	= [ "mjpg", "h264" ];
+	var aRecorderAudioFmt	= [ "alaw", "ulaw", "mp3", "aac" ];		// pcm option is hided
+	var	aLoadRtspAudioFmt	= new Array(),
+		aLoadRecorderAudioFmt = new Array();
+	
+	verifiedUser = verifyUser();
+		
+	if(verifiedUser == "")
+		window.top.location.href = "/";
+	
+	$(function(){
+		$("#teDate").datepicker({
+			dateFormat: "yy/mm/dd",
+			onSelect: function() {
+				changedFlag = true;
+				updateFlag = false;
+			}
+		});
+	});
+	
+	function prefixZero(number, digit)
+	{
+		var varNewNum = number + "";
+		
+		while(varNewNum.length < digit)
+			varNewNum = "0" + varNewNum;
+		
+		return varNewNum;
+	}
+	
+	function readClientDT()
+	{
+		if(updateFlag)
+		{
+			var nowDateTime = new Date();
+		
+			$("#teDate").val((nowDateTime.getYear() + 1900) + "/" + prefixZero((nowDateTime.getMonth() + 1), 2) + "/" + prefixZero(nowDateTime.getDate(), 2));
+		
+			$("#teHour").val(prefixZero(nowDateTime.getHours(), 2));
+			$("#teMinute").val(prefixZero(nowDateTime.getMinutes(), 2));
+			$("#teSecond").val(prefixZero(nowDateTime.getSeconds(), 2));
+		}
+		
+		setTimeout("readClientDT()", 1000);
+	};
+	
+	function readClientTimeZone()
+	{
+		if(updateFlag)
+		{
+			var nowDateTime = new Date();
+			varTimeZone = Math.abs(nowDateTime.getTimezoneOffset());
+			varTimeZoneHour = Math.floor(varTimeZone / 60);
+			varTimeZoneHour = prefixZero(varTimeZoneHour, 2);
+			varTimeZoneMinute = varTimeZone % 60;
+			varTimeZoneMinute = prefixZero(varTimeZoneMinute, 2);
+			
+			if(nowDateTime.getTimezoneOffset() > 0)
+				varSignExpr = "+";
+			else
+				varSignExpr = "-";
+			
+			$("#selTimeZone").val("GMT" + varSignExpr + varTimeZoneHour + varTimeZoneMinute);
+		}
+	}
+	
+	function readServerDT()
+	{
+		$.get("ctrlServerConfig.ncgi?doAction=read", function(data){
+			$("#teDate").val(data.DATE);
+			$("#teHour").val(data.HOUR);
+			$("#teMinute").val(data.MINUTE);
+			$("#teSecond").val(data.SECOND);
+			$("#selTimeZone").val(data.TIME_ZONE);
+		});
+	}
+	
+	function readRTSPConfig()
+	{
+		$.ajax({
+			type: "GET",
+			url: "checkFileExist.ncgi",
+			data: {
+				filePath: "/mnt/skyeye/etc/plugin/jpeg_encoder.conf"
+			},
+			async: false,
+			success: function(data){
+					aaRtspConfig[eMJPG][ePluginValid] = data.value;
+			}
+		});
+		
+		for(i = 0; i < aRtspAudioFmt.length; i++)
+		{
+			$.ajax({
+				type: "GET",
+				url: "checkFileExist.ncgi",
+				data: {
+					filePath: "/mnt/skyeye/etc/plugin/" + aRtspAudioFmt[i] + "_encoder.conf"
+				},
+				async: false,
+				success: function(data){
+					if(data.value == 1)
+						aLoadRtspAudioFmt.push(aRtspAudioFmt[i]);
+				}
+			});
+		}
+		
+		if(aaRtspConfig[eMJPG][ePluginValid] == true)
+		{
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "list",
+					group: "plugin", 
+					name: "rtsp",
+					param: "MJPG_Audio_Type"
+				},
+				async: false,
+				success: function(data){
+					if(data.value != "")
+					{
+						aaRtspConfig[eMJPG][eAudioFmtIdx] = data.value;
+						$("input:radio[name=rad_rtsp_mjpg_audio_fmt]").filter("[value=" + data.value + "]").prop("checked", true);
+					}
+				}
+			});
+		}
+		
+		$.ajax({
+			type: "GET",
+			url: "checkFileExist.ncgi",
+			data: {
+				filePath: "/mnt/skyeye/etc/plugin/h264_encoder.conf"
+			},
+			async: false,
+			success: function(data){
+					aaRtspConfig[eH264][ePluginValid] = data.value;
+			}
+		});
+		
+		if(aaRtspConfig[eH264][ePluginValid] == true)
+		{
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "list",
+					group: "plugin", 
+					name: "rtsp",
+					param: "H264_Audio_Type"
+				},
+				async: false,
+				success: function(data){
+					if(data.value != "")
+					{
+						aaRtspConfig[eH264][eAudioFmtIdx] = data.value;
+						$("input:radio[name=rad_rtsp_h264_audio_fmt]").filter("[value=" + data.value + "]").prop("checked", true);
+					}
+				}
+			});
+		}
+	}	// readRTSPConfig
+	
+	function writeRTSPConfig()
+	{
+		if(aaRtspConfig[eMJPG][ePluginValid] == true)
+		{
+			varNewAudioType = $("input:radio[name=rad_rtsp_mjpg_audio_fmt]:checked").val();
+			
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "update",
+					group: "plugin", 
+					name: "rtsp",
+					param: "MJPG_Audio_Type",
+					value: varNewAudioType
+				},
+				async: false,
+				success: function(data){
+					if(data.value != 0)
+					{
+						alert("Failed to update RTSP parameters!");
+						return ;
+					}
+				}
+			});
+		}
+		
+		if(aaRtspConfig[eH264][ePluginValid] == true)
+		{
+			varNewAudioType = $("input:radio[name=rad_rtsp_h264_audio_fmt]:checked").val();
+			
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "update",
+					group: "plugin", 
+					name: "rtsp",
+					param: "H264_Audio_Type",
+					value: varNewAudioType
+				},
+				async: false,
+				success: function(data){
+					if(data.value != 0)
+					{
+						alert("Failed to update RTSP parameters!");
+						return ;
+					}
+				}
+			});
+		}
+		
+		alert("RTSP parameters are saved");
+	}	// writeRTSPConfig
+	
+	function readRecorderConfig()
+	{
+		$.ajax({
+			type: "GET",
+			url: "checkFileExist.ncgi",
+			data: {
+				filePath: "/mnt/skyeye/etc/plugin/recorder.conf"
+			},
+			async: false,
+			success: function(data){
+					aRecorderConfig[ePluginValid] = data.value;
+			}
+		});
+		
+		for(i = 0; i < aRecorderAudioFmt.length; i++)
+		{
+			$.ajax({
+				type: "GET",
+				url: "checkFileExist.ncgi",
+				data: {
+					filePath: "/mnt/skyeye/etc/plugin/" + aRecorderAudioFmt[i] + "_encoder.conf"
+				},
+				async: false,
+				success: function(data){
+					if(data.value == 1)
+						aLoadRecorderAudioFmt.push(aRecorderAudioFmt[i]);
+				}
+			});
+		}
+		
+		if(aRecorderConfig[ePluginValid] == true)
+		{
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "list",
+					group: "plugin", 
+					name: "recorder",
+					param: "Audio_Format"
+				},
+				async: false,
+				success: function(data){
+					if(data.value != "")
+					{
+						aRecorderConfig[eAudioFmtIdx] = data.value;
+					}
+				}
+			});
+	
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "list",
+					group: "plugin", 
+					name: "recorder",
+					param: "Video_Format"
+				},
+				async: false,
+				success: function(data){
+					if(data.value != "")
+					{
+						aRecorderConfig[eVideoFmtIdx] = data.value;
+						$("input:radio[name=rad_record_av_fmt]").filter("[value=" + data.value + "_" + aRecorderConfig[eAudioFmtIdx] + "]").prop("checked", true);
+					}
+				}
+			});
+			
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "list",
+					group: "plugin", 
+					name: "recorder",
+					param: "File_Format"
+				},
+				async: false,
+				success: function(data){
+					if(data.value != "")
+					{
+						aRecorderConfig[eFileFmtIdx] = data.value;
+						$("input:radio[name=rad_record_media_fmt]").filter("[value=" + data.value + "]").prop("checked", true);
+					}
+				}
+			});
+		}
+	}	// readRecorderConfig
+	
+	function writeRecorderConfig()
+	{
+		if(aRecorderConfig[ePluginValid] == true)
+		{
+			varNewFileFormat = $("input:radio[name=rad_record_media_fmt]:checked").val();
+			varAVFormat = $("input:radio[name=rad_record_av_fmt]:checked").val();
+			
+			varNewVideoFormat = varAVFormat.split('_')[0];
+			varNewAudioFormat = varAVFormat.split('_')[1];
+			
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "update",
+					group: "plugin", 
+					name: "recorder",
+					param: "File_Format",
+					value: varNewFileFormat
+				},
+				async: false,
+				success: function(data){
+					if(data.value != 0)
+					{
+						alert("Failed to update Recorder parameters!");
+						return ;
+					}
+				}
+			});
+			
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "update",
+					group: "plugin", 
+					name: "recorder",
+					param: "Video_Format",
+					value: varNewVideoFormat
+				},
+				async: false,
+				success: function(data){
+					if(data.value != 0)
+					{
+						alert("Failed to update Recorder parameters!");
+						return ;
+					}
+				}
+			});
+			
+			$.ajax({
+				type: "GET",
+				url: "param.cgi",
+				data: {
+					action: "update",
+					group: "plugin", 
+					name: "recorder",
+					param: "Audio_Format",
+					value: varNewAudioFormat
+				},
+				async: false,
+				success: function(data){
+					if(data.value != 0)
+					{
+						alert("Failed to update Recorder parameters!");
+						return ;
+					}
+				}
+			});
+			
+			alert("Recorder parameters are saved");
+		}
+	}	// writeRecorderConfig
+	
+	readRTSPConfig();
+	readRecorderConfig();
+	
+	function readVideoCombConf()
+	{
+		$("#tbl_Set0").hide();
+		$("#tbl_Set1").hide();
+		
+		$.get("ctrlVideoCombConfig.ncgi?doAction=read", function(data){
+			$("#chk_set0_comb").prop("disabled", (data.Set0_Enabled == -1));
+			$("#chk_set0_comb").prop("checked", (data.Set0_Enabled == 1));
+			
+			if(data.Set0_Comb_Opt == 0)
+				$("#radio_set0_comb_composite").prop("checked", true);
+			else
+				$("#radio_set0_comb_pip").prop("checked", true);
+			
+			if(data.Set0_Comp_Opt == 0)
+				$("#radio_set0_comp_hori").prop("checked", true);
+			else
+				$("#radio_set0_comp_vert").prop("checked", true);
+			
+			$("#te_set0_x_pos").val(data.Set0_PIP_X_Pos);
+			$("#te_set0_y_pos").val(data.Set0_PIP_Y_Pos);
+			$("#sel_pipe0_resol").val(data.Pipe0_Resol);
+			$("#sel_pipe2_resol").val(data.Pipe2_Resol);
+			
+			$("#chk_set1_comb").prop("disabled", (data.Set1_Enabled == -1));
+			$("#chk_set1_comb").prop("checked", (data.Set1_Enabled == 1));
+			
+			if(data.Set1_Comb_Opt == 0)
+				$("#radio_set1_comb_composite").prop("checked", true);
+			else
+				$("#radio_set1_comb_pip").prop("checked", true);
+			
+			if(data.Set1_Comp_Opt == 0)
+				$("#radio_set1_comp_hori").prop("checked", true);
+			else
+				$("#radio_set1_comp_vert").prop("checked", true);
+			
+			$("#te_set1_x_pos").val(data.Set1_PIP_X_Pos);
+			$("#te_set1_y_pos").val(data.Set1_PIP_Y_Pos);
+			$("#sel_pipe1_resol").val(data.Pipe1_Resol);
+			$("#sel_pipe3_resol").val(data.Pipe3_Resol);
+			
+			UpdateSet0Conf();
+			UpdateSet1Conf();
+		});
+	}	// readVideoCombConf
+	
+	function writeVideoCombConf()
+	{
+		if(
+			(aVideoResol.indexOf($("#sel_pipe0_resol").val()) < aVideoResol.indexOf($("#sel_pipe2_resol").val())) ||
+			(aVideoResol.indexOf($("#sel_pipe0_resol").val()) < aVideoResol.indexOf($("#sel_pipe1_resol").val()))
+		)
+		{
+			alert("Pipe_0's resolution must be larger than or equal to Pipe_1's or Pipe_2's");
+			$("#sel_pipe0_resol").focus();
+			return ;
+		}
+		
+		if(aVideoResol.indexOf($("#sel_pipe2_resol").val()) < aVideoResol.indexOf($("#sel_pipe3_resol").val()))
+		{
+			alert("Pipe_2's resolution must be larger than or equal to Pipe_3's");
+			$("#sel_pipe2_resol").focus();
+			return ;
+		}
+		
+		if($("input:radio[name=Set0_Comb_Opt]:checked").val() == 1)
+		{
+			if(($("#te_set0_x_pos").val() % 16 != 0) || ($("#te_set0_y_pos").val() % 16 != 0))
+			{
+				alert("X and Y position must aligned to 16!");
+				$("#te_set0_x_pos").focus();
+				return ;
+			}
+		}
+
+		if($("input:radio[name=Set1_Comb_Opt]:checked").val() == 1)
+		{
+			if(($("#te_set1_x_pos").val() % 16 != 0) || ($("#te_set1_y_pos").val() % 16 != 0))
+			{
+				alert("X and Y position must aligned to 16!");
+				$("#te_set1_x_pos").focus();
+				return ;
+			}
+		}
+		
+		$.ajax({
+			type: "GET",
+			url: "ctrlVideoCombConfig.ncgi",
+			data: {
+				doAction: "write",
+				Set0_Enabled: $("#chk_set0_comb").is(":checked") ? 1 : 0,
+				Set0_Comb_Opt: $("input:radio[name=Set0_Comb_Opt]:checked").val(), 
+				Set0_Comp_Opt: $("input:radio[name=Set0_Comp_Opt]:checked").val(),
+				Set0_PIP_X_Pos: $("#te_set0_x_pos").val(),
+				Set0_PIP_Y_Pos: $("#te_set0_y_pos").val(),
+				Pipe0_Resol: $("#sel_pipe0_resol").val(),
+				Pipe2_Resol: $("#sel_pipe2_resol").val(),
+				Set1_Enabled: $("#chk_set1_comb").is(":checked") ? 1 : 0,
+				Set1_Comb_Opt: $("input:radio[name=Set1_Comb_Opt]:checked").val(), 
+				Set1_Comp_Opt: $("input:radio[name=Set1_Comp_Opt]:checked").val(),
+				Set1_PIP_X_Pos: $("#te_set1_x_pos").val(),
+				Set1_PIP_Y_Pos: $("#te_set1_y_pos").val(),
+				Pipe1_Resol: $("#sel_pipe1_resol").val(),
+				Pipe3_Resol: $("#sel_pipe3_resol").val()
+			},
+			async: false,
+			success: function(data){
+				alert(data.MSG);
+			}
+		});
+	}
+	
+	function UpdateSet0Conf()
+	{
+		if($("#chk_set0_comb").is(":checked"))
+		{
+			$("#tbl_Set0").show();
+			
+			if($("input:radio[name=Set0_Comb_Opt]:checked").val() == 0)
+			{
+				$("#tr_Set0_Comp_Opt").show();
+				$("#tr_Set0_PIP_Pos").hide();
+				
+				if($("input:radio[name=Set0_Comp_Opt]:checked").val() == 0)
+				{
+					$("#tbl_Set0_Comp_Hori").show();
+					$("#tbl_Set0_Comp_Vert").hide();
+					$("#tbl_Set0_PIP").hide();
+				}
+				else
+				{
+					$("#tbl_Set0_Comp_Hori").hide();
+					$("#tbl_Set0_Comp_Vert").show();
+					$("#tbl_Set0_PIP").hide();
+				}
+			}
+			else
+			{
+				$("#tr_Set0_Comp_Opt").hide();
+				$("#tr_Set0_PIP_Pos").show();
+				$("#tbl_Set0_Comp_Hori").hide();
+				$("#tbl_Set0_Comp_Vert").hide();
+				$("#tbl_Set0_PIP").show();
+			}
+		}
+		else
+		{
+			$("#tbl_Set0").hide();
+		}
+	}
+	
+	function UpdateSet1Conf()
+	{
+		if($("#chk_set1_comb").is(":checked"))
+		{
+			$("#tbl_Set1").show();
+			
+			if($("input:radio[name=Set1_Comb_Opt]:checked").val() == 0)
+			{
+				$("#tr_Set1_Comp_Opt").show();
+				$("#tr_Set1_PIP_Pos").hide();
+				
+				if($("input:radio[name=Set1_Comp_Opt]:checked").val() == 0)
+				{
+					$("#tbl_Set1_Comp_Hori").show();
+					$("#tbl_Set1_Comp_Vert").hide();
+					$("#tbl_Set1_PIP").hide();
+				}
+				else
+				{
+					$("#tbl_Set1_Comp_Hori").hide();
+					$("#tbl_Set1_Comp_Vert").show();
+					$("#tbl_Set1_PIP").hide();
+				}
+			}
+			else
+			{
+				$("#tr_Set1_Comp_Opt").hide();
+				$("#tr_Set1_PIP_Pos").show();
+				$("#tbl_Set1_Comp_Hori").hide();
+				$("#tbl_Set1_Comp_Vert").hide();
+				$("#tbl_Set1_PIP").show();
+			}
+		}
+		else
+		{
+			$("#tbl_Set1").hide();
+		}
+	}
+	
+	$(document).ready(function(e){
+		for(var i = 0; i < aVideoResol.length; i++)
+		{
+			$("#sel_pipe0_resol").append("<option value=" + aVideoResol[i] + ">" + aVideoResol[i] + "</option>");
+			$("#sel_pipe1_resol").append("<option value=" + aVideoResol[i] + ">" + aVideoResol[i] + "</option>");
+			$("#sel_pipe2_resol").append("<option value=" + aVideoResol[i] + ">" + aVideoResol[i] + "</option>");
+			$("#sel_pipe3_resol").append("<option value=" + aVideoResol[i] + ">" + aVideoResol[i] + "</option>");
+		}
+		
+		readServerDT();
+		
+		$("#teDate").add("#teHour").add("#teMinute").add("#teSecond").focus(function(){
+			updateFlag = false;
+		});
+		
+		$("#teDate").add("#teHour").add("#teMinute").add("#teSecond").blur(function(){
+			if(!changedFlag)
+				updateFlag = true;
+		});
+		
+		$("#teHour").add("#teMinute").add("#teSecond").change(function(){
+			changedFlag = true;
+		});
+		
+		$("#btnClientDT").click(function(){
+			updateFlag = true;
+			readClientDT();
+			readClientTimeZone();
+		});
+		
+		$("#btnDTApply").click(function(){
+			$("#btnDTApply").prop("disabled", true); 
+			
+			$.ajax({
+				url: "ctrlServerConfig.ncgi", 
+				type: "GET",
+				async: false,
+				data: {
+					doAction: "write",
+					Date: $("#teDate").val().replace(/\//g, ''),
+					Hour: prefixZero($("#teHour").val(), 2),
+					Minute: prefixZero($("#teMinute").val(), 2),
+					Second: prefixZero($("#teSecond").val(), 2),
+					TimeZone: $("#selTimeZone").val()
+				},
+				dataType: "json",
+				error: function(xhr){
+					//alert("Failed to set server date and time!");
+					$("#btnDTApply").prop("disabled", false);
+				},
+				success: function(data){
+					alert(data.MSG);
+					$("#btnDTApply").prop("disabled", false);
+				}
+			});
+		});
+		
+		$("#btnDTReset").click(function(){
+			readServerDT();
+		});
+		
+		$("#btnSaveMediaConfig").click(function(){
+			writeRTSPConfig();
+			writeRecorderConfig();
+		});
+		
+		$("#btnRebootSkyEye").click(function(){
+			if(confirm("Click OK to reboot and apply new configuration. Please wait few seconds to reconnect later."))
+			{
+				setTimeout(function(){
+					window.location.reload();
+				}, 30000);
+				
+				$.get("/restart.cgi");
+			}
+		});
+		
+		$("#btnDiscardMediaConfig").click(function(){
+			readRTSPConfig();
+			readRecorderConfig();
+		});
+		
+		readVideoCombConf();
+		
+		$("#chk_set0_comb, #radio_set0_comb_composite, #radio_set0_comb_pip, #radio_set0_comp_hori, #radio_set0_comp_vert").click(UpdateSet0Conf);
+		$("#chk_set1_comb, #radio_set1_comb_composite, #radio_set1_comb_pip, #radio_set1_comp_hori, #radio_set1_comp_vert").click(UpdateSet1Conf);
+		$("#btnCombSave").click(writeVideoCombConf);
+	});
+	//]]>
+	</script>
+</head>
+<body>
+	<table width="400">
+		<tr><td><span style="color:red;">Buttons with * need reboot to take effect.</span></td></tr>
+		<tr><td>
+			<input type="button" id="btnPluginConfig" value="Plugin Configuration*" onClick="window.open('/config/list.ncgi?type=plugin', '_list');" />
+			<input type="button" id="btnRebootSkyEye" value="Reboot" />
+		</td></tr>
+		<tr><td><hr></td></tr>
+		<tr><td>
+			<table border="1" cellspacing="0" width="100%">
+				<tr><td>
+					<table width="100%">
+						<tr bgcolor="#D0D0D0">
+							<td colspan="2">
+								<b>Date.Time</b>
+							</td>
+						</tr>
+						<tr>
+							<td>Date</td>
+							<td><input type="text" id="teDate"></td>
+						</tr>
+						<tr>
+							<td>Time</td>
+							<td>
+								<input type="text" id="teHour" size="2" maxlength="2" />:
+								<input type="text" id="teMinute" size="2" maxlength="2" />:
+								<input type="text" id="teSecond" size="2" maxlength="2" />
+							</td>
+						</tr>
+						<tr>
+							<td>Time-Zone</td>
+							<td>
+								<select id="selTimeZone">
+								<option value="GMT-1:00">GMT+1:00</option>
+								<option value="GMT-2:00">GMT+2:00</option>
+								<option value="GMT-3:00">GMT+3:00</option>
+								<option value="GMT-4:00">GMT+4:00</option>
+								<option value="GMT-5:00">GMT+5:00</option>
+								<option value="GMT-5:30">GMT+5:30</option>
+								<option value="GMT-6:00">GMT+6:00</option>
+								<option value="GMT-7:00">GMT+7:00</option>
+								<option value="GMT-7:30">GMT+7:30</option>
+								<option value="GMT-8:00">GMT+8:00</option>
+								<option value="GMT-9:00">GMT+9:00</option>
+								<option value="GMT-9:30">GMT+9:30</option>
+								<option value="GMT-10:00">GMT+10:00</option>
+								<option value="GMT-11:00">GMT+11:00</option>
+								<option value="GMT-12:00">GMT+12:00</option>
+								<option value="GMT+11:00">GMT-11:00</option>
+								<option value="GMT+10:00">GMT-10:00</option>
+								<option value="GMT+9:00">GMT-9:00</option>
+								<option value="GMT+8:00">GMT-8:00</option>
+								<option value="GMT+7:00">GMT-7:00</option>
+								<option value="GMT+6:00">GMT-6:00</option>
+								<option value="GMT+5:00">GMT-5:00</option>
+								<option value="GMT+4:00">GMT-4:00</option>
+								<option value="GMT+3:00">GMT-3:00</option>
+								<option value="GMT+2:00">GMT-2:00</option>
+								<option value="GMT+1:00">GMT-1:00</option>
+								</select>
+							</td>
+						</tr>
+						<tr align="right">
+							<td colspan="2">
+								<hr>
+								<input type="button" id="btnClientDT" value="Sync. with Client" />
+								<input type="button" id="btnDTApply" value="Apply" />
+								<input type="button" id="btnDTReset" value="Reset" />
+							</td>
+						</tr>
+					</table>
+				</td></tr>
+			</table>
+		</td></tr>
+		<tr>
+			<td><hr></td>
+		</tr>
+		<tr>
+			<td style="border: 2px solid;">
+				<table width="100%">
+				<tr bgcolor="#D0D0D0"><td colspan="2"><b><a id="VideoComb">Video Combination</a></b></td></tr>
+				<tr align="center"><td>
+					<table>
+						<tr>
+						<td>
+							Pipe_0 & Pipe_2<br>
+							Combination<input type="checkbox" id="chk_set0_comb"></input>
+						</td>
+						</tr>
+					</table>
+					<table border="1" cellspacing="0" id="tbl_Set0">
+					<tr>
+						<td>
+							<input type="radio" id="radio_set0_comb_composite" name="Set0_Comb_Opt" value="0">Composite</input><br>
+							<input type="radio" id="radio_set0_comb_pip" name="Set0_Comb_Opt" value="1">PIP</input>
+						</td>
+					</tr>
+					<tr id="tr_Set0_Comp_Opt">
+						<td>
+							<input type="radio" id="radio_set0_comp_hori" name="Set0_Comp_Opt" value="0">Horizontal</input><br>
+							<input type="radio" id="radio_set0_comp_vert" name="Set0_Comp_Opt" value="1">Vertical</input>
+						</td>
+					</tr>
+					<tr id="tr_Set0_PIP_Pos">
+						<td>
+							X Position<input type="text" id="te_set0_x_pos" name="Set0_X_Pos" value="0" size="4" maxlength="4"></input><br>
+							Y Position<input type="text" id="te_set0_y_pos" name="Set0_Y_Pos" value="0" size="4" maxlength="4"></input>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							Pipe_0 Resol<select id="sel_pipe0_resol"></select><br>
+							Pipe_2 Resol<select id="sel_pipe2_resol"></select>
+						</td>
+					</tr>
+					<tr align="center">
+						<td>
+							<table>
+							<tr>
+								<td>
+									<table cellspacing="0" id="tbl_Set0_Comp_Hori">
+										<tr><td class="Comb1">Pipe_0</td><td class="Comb2">Pipe_2</td></tr>
+									</table>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<table cellspacing="0" id="tbl_Set0_Comp_Vert">
+										<tr><td class="Comb1">Pipe_0</td></tr>
+										<tr><td class="Comb2">Pipe_2</td></tr>
+									</table>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<table id="tbl_Set0_PIP">
+										<tr align="center">
+											<td width="80" height="60" class="Comb1">
+												Pipe_0
+												<table>
+													<tr><td class="Comb2">Pipe_2</td></tr>
+												</table>
+											</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							</table>
+						</td>
+					</tr>
+					</table>
+				</td>
+				<td>
+					<table>
+						<tr>
+						<td>
+							Pipe_1 & Pipe_3<br>
+							Combination<input type="checkbox" id="chk_set1_comb"></input>
+						</td>
+						</tr>
+					</table>
+					<table border="1" cellspacing="0" id="tbl_Set1">
+					<tr>
+						<td>
+							<input type="radio" id="radio_set1_comb_composite" name="Set1_Comb_Opt" value="0">Composite</input><br>
+							<input type="radio" id="radio_set1_comb_pip" name="Set1_Comb_Opt" value="1">PIP</input>
+						</td>
+					</tr>
+					<tr id="tr_Set1_Comp_Opt">
+						<td>
+							<input type="radio" id="radio_set1_comp_hori" name="Set1_Comp_Opt" value="0">Horizontal</input><br>
+							<input type="radio" id="radio_set1_comp_vert" name="Set1_Comp_Opt" value="1">Vertical</input>
+						</td>
+					</tr>
+					<tr id="tr_Set1_PIP_Pos">
+						<td>
+							X Position<input type="text" id="te_set1_x_pos" name="Set1_X_Pos" value="0" size="4" maxlength="4"></input><br>
+							Y Position<input type="text" id="te_set1_y_pos" name="Set1_Y_Pos" value="0" size="4" maxlength="4"></input>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							Pipe_1 Resol<select id="sel_pipe1_resol"></select><br>
+							Pipe_3 Resol<select id="sel_pipe3_resol"></select>
+						</td>
+					</tr>
+					<tr align="center">
+						<td>
+							<table>
+							<tr>
+								<td>
+									<table cellspacing="0" id="tbl_Set1_Comp_Hori">
+										<tr><td class="Comb1">Pipe_1</td><td class="Comb2">Pipe_3</td></tr>
+									</table>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<table cellspacing="0" id="tbl_Set1_Comp_Vert">
+										<tr><td class="Comb1">Pipe_1</td></tr>
+										<tr><td class="Comb2">Pipe_3</td></tr>
+									</table>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<table id="tbl_Set1_PIP">
+										<tr align="center">
+											<td width="80" height="60" class="Comb1">
+												Pipe_1
+												<table>
+													<tr><td class="Comb2">Pipe_3</td></tr>
+												</table>
+											</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							</table>
+						</td>
+					</tr>
+					</table>
+				</td></tr>
+				<tr>
+					<td colspan="2"><hr></td>
+				</tr>
+				<tr align="right">
+					<td colspan="2">
+						<input type="button" id="btnCombSave" value="Save*" />
+						<input type="button" id="btnCombRestore" value="Restore" />
+					</td>
+				</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td><hr></td>
+		</tr>
+		<tr><td style="border: 2px solid;">
+			<table width="100%">
+				<tr bgcolor="#D0D0D0">
+				<td><b>RTSP Output Format</b></td>
+				</tr>
+				<tr><td>
+					<table border="1" cellspacing="0" width="100%">
+						<script type="text/javascript">
+						document.write('<tr align="center">');
+						document.write('<td></td>');
+						
+						for(i = 0; i < aLoadRtspAudioFmt.length; i++)
+						{
+							document.write('<td>');
+							document.write(aLoadRtspAudioFmt[i]);
+							document.write('</td>');
+						}
+						
+						document.write('</tr>');
+						
+						for(j = 0; j < aRtspVideoFmt.length; j++)
+						{
+							if(aaRtspConfig[j][ePluginValid] != false)
+							{
+								document.write('<tr align="center">');
+								document.write('<td>');
+								document.write(aRtspVideoFmt[j]);
+								document.write('</td>');
+							
+								for(i = 0; i < aLoadRtspAudioFmt.length; i++)
+								{
+									if(aaRtspConfig[j][eAudioFmtIdx] == aLoadRtspAudioFmt[i])
+										checkTag = " checked";
+									else
+										checkTag = "";
+									
+									document.write('<td><input type="radio" name="rad_rtsp_' + aRtspVideoFmt[j] + '_audio_fmt" value="' + aLoadRtspAudioFmt[i] + '"' + checkTag + '></td>');
+								}
+								
+								document.write('</tr>');
+							}
+						}
+						</script>
+					</table>
+				</td></tr>
+				<tr bgcolor="#D0D0D0">
+					<td><b>Recorder Output Format</b></td>
+				</tr>
+				<tr><td>
+					<table border="1" cellspacing="0" width="100%">
+						<tr>
+							<td>Media Type</td>
+							<script type="text/javascript">
+							document.write('<td colspan="' + aLoadRecorderAudioFmt.length + '">');
+							for(i = 0; i < aRecorderMediaFmt.length; i++)
+							{
+								if(aRecorderMediaFmt[i] == aRecorderConfig[eFileFmtIdx])
+									checkTag = " checked";
+								else
+									checkTag = "";
+								
+								document.write('<input type="radio" name="rad_record_media_fmt" value="' + aRecorderMediaFmt[i] + '"' + checkTag + '>' + aRecorderMediaFmt[i]);
+							}
+							document.write('</td>');
+							</script>
+						</tr>
+					</table>
+				</td></tr>
+				<tr bgcolor="#D0D0D0">
+					<td><b>Recorder A/V Format</b></td>
+				</tr>
+				<tr><td>
+					<table border="1" cellspacing="0" width="100%">
+						<script type="text/javascript">
+						document.write('<tr align="center">');
+						document.write('<td></td>');
+						
+						for(i = 0; i < aLoadRecorderAudioFmt.length; i++)
+						{
+							document.write('<td>');
+							document.write(aLoadRecorderAudioFmt[i]);
+							document.write('</td>');
+						}
+						
+						document.write('</tr>');
+						
+						for(j = 0; j < aRecorderVideoFmt.length; j++)
+						{
+							if(aaRtspConfig[j][ePluginValid] != false)
+							{
+								document.write('<tr align="center">');
+								document.write('<td>');
+								document.write(aRecorderVideoFmt[j]);
+								document.write('</td>');
+								
+								for(i = 0; i < aLoadRecorderAudioFmt.length; i++)
+								{
+									if((aRecorderVideoFmt[j] == aRecorderConfig[eVideoFmtIdx]) && (aLoadRecorderAudioFmt[i] == aRecorderConfig[eAudioFmtIdx]))
+										checkTag = " checked";
+									else
+										checkTag = "";
+									
+									document.write('<td><input type="radio" name="rad_record_av_fmt" value="' + aRecorderVideoFmt[j] + '_' + aLoadRecorderAudioFmt[i] + '"' + checkTag + '></td>');
+								}
+								
+								document.write('</tr>');
+							}
+						}
+						</script>
+					</table>
+				</td></tr>
+				<tr><td></td></tr>
+			</td></tr>
+			<tr><td><hr></td></tr>
+			<tr align="right"><td>
+				<input type="button" id="btnSaveMediaConfig" value="Save*" />
+				<input type="button" id="btnDiscardMediaConfig" value="Discard" />
+			</td></tr>
+		</table>
+		</td></tr>
+	</table>
+</body>
+</html>

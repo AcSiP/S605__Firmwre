@@ -1,0 +1,370 @@
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton SkyEye Demo Page</title>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet">
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+		<script type="text/javascript" src="js/jquery.jplayer.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+
+		<script type="text/javascript">
+		//<![CDATA[
+			var checkRecordStatusTimer	= 0;
+			
+			$.ajaxSetup({
+				type: "GET",
+				headers: { "cache-control": "no-cache" }
+			});
+			
+			function readZoomParam() {
+				$.get("/server.command?command=get_zoom", function(data){
+					$("#zoom_status").text(data.value);
+				});
+				
+				$.get("/server.command?command=cruise_get_pan&value=3", function(data){
+					if(data.value < 0)
+					{
+						$("#trPTZTitle").hide();
+						$("#trPTZ").hide();
+					}
+					else
+					{
+						$("#cruise_speed").val(data.value);
+						$("#trPTZTitle").show();
+						$("#trPTZ").show();
+					}
+				});
+			}
+
+			function readSensorParam() {
+				$.get("/server.command?command=get_brightness", function(data){
+					$("#brightness_status").text(data.value);
+				});
+
+				$.get("/server.command?command=get_contrast", function(data){
+					$("#contrast_status").text(data.value);
+				});
+			}
+
+			$.extend({
+				getUrlVars: function(){
+					var vars = [], hash;
+					var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+					for(var i = 0; i < hashes.length; i++)
+					{
+						hash = hashes[i].split('=');
+						vars.push(hash[0]);
+						vars[hash[0]] = hash[1];
+					}
+					return vars;
+				},
+				getUrlVar: function(name){
+					return $.getUrlVars()[name];
+				}
+			});
+
+			verifiedUser = verifyUser();
+		
+			if(verifiedUser == "")
+				window.top.location.href = "/";
+			
+			function checkRecordStatus()
+			{
+				//$("#btnRecorder").prop("disabled", true);
+				
+				$.get("server.command?command=check_storage", function(data)
+				{
+					if(data.value == "0")
+					{
+						$("#btnRecorder").text("No storage");
+						$("#btnRecorder").show();
+						
+						checkRecordStatusTimer = setTimeout("checkRecordStatus()", 5000);
+					}
+					else
+					{
+						$.get("/server.command?command=is_pipe_record&type=" + varViewType + "&pipe=" + varViewPipe)
+						.done(function(data){
+							if(data.value < 0)
+							{
+								console.log("is_pipe_record return " + data.value);
+								$("#btnRecorder").text("Not available");
+								$("#btnRecorder").prop("disabled", true);
+							}
+							else
+							{
+								switch(data.value)
+								{
+									case "1":
+										$("#btnRecorder").text("Stop.Record");
+										$("#btnRecorder").prop("disabled", false);
+										break;
+									case "2":
+										$("#btnRecorder").text("Not available");
+										$("#btnRecorder").prop("disabled", true);
+										break;
+									default:
+										$("#btnRecorder").text("Start.Record");
+										$("#btnRecorder").prop("disabled", false);
+										break;
+								}
+							}
+							
+							checkRecordStatusTimer = setTimeout("checkRecordStatus()", 5000);
+						})
+						.fail(function(){
+							$("#btnRecorder").prop("disabled", true);
+						});
+					}
+				});
+			}
+			
+			var bContCmd = false;
+			
+			function repeatCmd(btnStatus, cmdText)
+			{
+				if(bContCmd)
+				{
+					$.get("/server.command?command=" + cmdText, function(data){
+						if(btnStatus != null)
+							btnStatus.text(data.value);
+						
+						setTimeout(
+							function(){
+								repeatCmd(btnStatus, cmdText);
+							}, 
+							150
+						);
+					});
+				}
+			}
+			
+			function sendVideoCmd(btnAct, btnStatus, cmdText)
+			{
+				btnAct.mousedown(function(){
+					bContCmd = true;
+					repeatCmd(btnStatus, cmdText);
+				});
+				
+				btnAct.mouseup(function(){
+					bContCmd = false;
+				});
+			}
+			
+			function sendPTZCmd(btnAct, u32Key)
+			{
+				btnAct.mousedown(function(){
+					$.get("/server.command?command=keydown&value=" + u32Key);
+				});
+				
+				btnAct.mouseup(function(){
+					$.get("/server.command?command=keyup&value=" + u32Key);
+				});
+			}
+			
+			$(document).ready(function(e)
+			{
+				varViewType = $.getUrlVar("type");
+				varViewPipe = $.getUrlVar("pipe");
+				checkRecordStatus();
+				readZoomParam();
+				readSensorParam();
+
+				sendVideoCmd($("#plus_brightness_status"), $("#brightness_status"), "plus_brightness");
+				sendVideoCmd($("#minus_brightness_status"), $("#brightness_status"), "minus_brightness");
+				sendVideoCmd($("#plus_contrast_status"), $("#contrast_status"), "plus_contrast");
+				sendVideoCmd($("#minus_contrast_status"), $("#contrast_status"), "minus_contrast");
+				
+				sendPTZCmd($("#btnTiltUp"), 1);
+				sendPTZCmd($("#btnTiltDown"), 0);
+				sendPTZCmd($("#btnPanLeft"), 2);
+				sendPTZCmd($("#btnPanRight"), 3);
+				
+				sendPTZCmd($("#btnZoomIn"), 4);
+				sendPTZCmd($("#btnZoomOut"), 5);
+				
+				$("#cruise_right").click(function()
+				{
+					$.get("/server.command?command=cruise_set_pan&value=0", function(data){
+						console.log("cruise_set home point");
+					});
+				});
+				
+				$("#cruise_mode_left").click(function()
+				{
+					$.get("/server.command?command=cruise_set_pan&value=1", function(data){
+						console.log("cruise_set left point");
+					});
+				});
+				
+				$("#cruise_mode_right").click(function()
+				{
+					$.get("/server.command?command=cruise_set_pan&value=2", function(data){
+						console.log("cruise_set right point");
+					});
+				});
+				
+				$("#cruise_left").click(function()
+				{
+					$.get("/server.command?command=cruise&value=1", function(data){
+						console.log("return home");
+					});
+				});
+				
+				$("#cruise_mode").click(function()
+				{
+					$.get("/server.command?command=cruise&value=2", function(data){// + $("#cruise_speed").val(), function(data){
+						if(data.value < 0)
+							alert("Please setup left and right end point before entering cruise mode!");
+					});
+				});
+				
+				$("#btnRecorder").click(function()
+				{
+					if($("#btnRecorder").text() == "No storage")
+					{
+						if(confirm("Please insert SD card or USB disk to SkyEye first!\nIs SD card or USB disk inserted?"))
+						{
+							window.location.reload();
+						}
+						else
+							return ;
+					}
+					
+					if($("#btnRecorder").text() == "Start.Record")
+					{
+						$.get("/server.command?command=start_record_pipe&type=" + varViewType + "&pipe=" + varViewPipe, function(data)
+						{
+							$("#btnRecordPipe").prop("disabled", true);
+						})
+						.done(function(data)
+						{
+							if(data.value >= 0)
+								$("#btnRecorder").text("Stop.Record");
+							else
+							{
+								alert("Failed to record because of error code [" + data.value + "]!");
+								
+								$.get("/server.command?command=is_pipe_record&type=" + varViewType + "&pipe=" + varViewPipe)
+								.done(function(data)
+								{
+									console.log("Return code: " + data.value);
+								});
+							}
+							
+							$("#btnRecordPipe").prop("disabled", false);
+						});
+					}
+					else
+					{
+						$.get("/server.command?command=stop_record&type=" + varViewType + "&pipe=" + varViewPipe, function(data)
+						{
+							$("#btnRecordPipe").prop("disabled", true);
+						})
+						.done(function(data)
+						{
+							$("#btnRecorder").text("Start.Record");
+							$("#btnRecordPipe").prop("disabled", false);
+						});
+					}
+				});
+			});
+
+		//]]>
+		</script>
+	</head>
+	<body>
+	<table align="center">
+		<tr bgcolor="#D0D0D0">
+			<td colspan="4" align="center"><b>Sensor Control</b></td>
+		</tr>
+		<tr>
+			<td>Brightness</td>
+			<td><input id="minus_brightness_status" type="button" value="&#9668;" /></td>
+			<td align="center"><span id="brightness_status"></span></td>
+			<td><input id="plus_brightness_status" type="button" value="&#9658;" /></td>
+		</tr>
+		<tr>
+			<td colspan="4"><hr></td>
+		</tr>
+		<tr>
+			<td>Contrast</td>
+			<td><input id="minus_contrast_status" type="button" value="&#9668;" /></td>
+			<td align="center"><span id="contrast_status"></span></td>
+			<td><input id="plus_contrast_status" type="button" value="&#9658;" /></td>
+		</tr>
+		<tr id="trPTZTitle" bgcolor="#D0D0D0" style="display: none;">
+			<td colspan="4" align="center"><b>PTZ Control</b></td>
+		</tr>
+		<tr id="trPTZ" style="display: none;">
+			<td colspan="4" align="center">
+				<table cellspacing="0">
+					<tr>
+						<td colspan="4" align="center"><input id="btnTiltUp" type="button" value="&#9650;" /></input></td>
+					</tr>
+					<tr>
+						<td align="center" width="25%" height="40px"><input id="btnPanLeft" type="button" value="&#9668;" /></input></td>
+						<td style="border-right: 1px solid;" width="25%"><hr style="border: 1px solid;"></td>
+						<td style="border-left: 1px solid;" width="25%"><hr style="border: 1px solid;"></td>
+						<td align="center" width="25%"><input id="btnPanRight" type="button" value="&#9658;" /></input></td>
+					</tr>
+					<tr>
+						<td colspan="4" align="center"><input id="btnTiltDown" type="button" value="&#9660;" /></input></td>
+					</tr>
+					<tr>
+						<td colspan="4"><hr /></td>
+					</tr>
+					<tr>
+						<td colspan="4">
+							<input id="cruise_mode_left" type="button" value="Set Left End" />
+							<input id="cruise_mode_right" type="button" value="Set Right End" />
+						</td>
+					</tr>
+					<tr>
+						<td colspan="4">
+							<input id="cruise_left" type="button" value="Go Left End" />
+							<!--input id="cruise_right" type="button" value="Go Right End" /-->
+						</td>
+					</tr>
+					<tr>
+						<td colspan="4">
+							<input id="cruise_mode" type="button" value="Cruise" />
+							<select id="cruise_speed">
+								<option value="5">Speed:Fast</option>
+								<option value="50">Speed:Middle</option>
+								<option value="500">Speed:Slow</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="4"><hr /></td>
+					</tr>
+					<tr>
+						<td colspan="4"><hr /></td>
+					</tr>
+					<tr style="display: none;">
+						<td colspan="4" align="center">
+							<input id="btnZoomOut" type="button" value="&#9668;" /></input>
+							Zoom - <span id="zoom_status"></span>
+							<input id="btnZoomIn" type="button" value="&#9658;" /></input>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr bgcolor="#D0D0D0">
+			<td colspan="4" align="center"><b>Recorder</b></td>
+		</tr>
+		<tr>
+			<td colspan="4" align="center">
+				<button id="btnRecorder">Start.Record</button>
+			</td>
+		</tr>
+	</table>
+	</body>
+</html>

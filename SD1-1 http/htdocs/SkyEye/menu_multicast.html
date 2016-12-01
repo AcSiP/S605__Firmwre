@@ -1,0 +1,153 @@
+<!--Force IE6 into quirks mode with this comment tag-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+	<head>
+		<title>Nuvoton SkyEye Demo</title>
+		<link type="text/css" href="../jquery/css/redmond/jquery-ui-custom.min.css" rel="stylesheet">
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="../jquery/js/jquery-ui-custom.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		<script type="text/javascript" src="js/videoParam.js"></script>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link rel="stylesheet" type="text/css" href="css-frames-style.css" />
+		<!--For versions below Internet Explorer 7-->
+		<!--[if lt IE 7]>
+		<link rel="stylesheet" href="css-frames-style-unreal.css" type="text/css">
+		<![endif]-->
+	
+		<script type="text/javascript">
+		//<![CDATA[
+		var	varViewPipe		= 0;
+		var iAckIndex		= 0;
+		
+		$.ajaxSetup({
+			type: "POST",
+			headers: { "cache-control": "no-cache" }
+		});
+		
+		$.ajaxSetup({
+			type: "GET",
+			headers: { "cache-control": "no-cache" }
+		});
+		
+		function clearRefreshTimeout()
+		{
+			varShortTimeout = 0;
+			varLongTimeout = 0;
+		}
+		
+		$.extend({
+			getUrlVars: function(){
+				var vars = [], hash;
+				var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+				for(var i = 0; i < hashes.length; i++)
+				{
+					hash = hashes[i].split('=');
+					vars.push(hash[0]);
+					vars[hash[0]] = hash[1];
+				}
+				return vars;
+			},
+			getUrlVar: function(name){
+				return $.getUrlVars()[name];
+			}
+		});
+		
+		if(verifyUser() == "")
+			window.top.location.href = "/";
+		
+		function ackResponse()
+		{
+			$.get("/server.command?command=ack&value=" + iAckIndex, function(data){
+				iAckIndex++;
+				setTimeout("ackResponse()", 1000);
+			});
+		}
+		
+		$(document).ready(function(e){
+			$("#btnCtrlMulticast").prop("disabled", true);
+			
+			$.get("./ctrlIPChk.ncgi", function(data){
+				if(data == 1)
+					$("#btnCtrlMulticast").prop("disabled", false);
+			});
+			
+			varViewPipe = $.getUrlVar("pipe");
+			CreateVideoParam("tagResol", "tagQuality", "tagMaxFPS", varViewPipe);
+			
+			$("#btnCtrlMulticast").click(
+				function(){
+					if($("#btnCtrlMulticast").text() == "Enable")
+					{
+						$.get("/server.command?command=ctrl_multicast&value=3", function(data){
+							$("#btnCtrlMulticast").text("Disable");
+						});
+					}
+					else
+					{
+						$.get("/server.command?command=ctrl_multicast&value=0", function(data){
+							$("#btnCtrlMulticast").text("Enable");
+						});
+					}
+				}
+			);
+		});
+		//]]>
+		</script>
+	
+	</head>
+	<body>
+	<div id="Info-Dialog"></div>
+	
+	<div id="framecontent">
+	<div class="innertube">
+	
+		<table>
+			<tr><td><a id="back" href="menu_dual_stream.html">[Back to Normal View]</a></td></tr>
+			<tr>
+				<td>
+					<hr>
+					<a href="http://www.nuvoton.com" target="_blank"><img src="../img/nuvoton.png" style="border:none;" /></a>
+					<a href="/">.</a>
+				</td>
+			</tr>
+		</table>
+	
+	</div>
+	</div>
+	
+	<div id="maincontent">
+	<div class="innertube">
+		<table cellpadding="0">
+			<tr>
+				<td><div class="ParamName">Resolution</div></td>
+				<td><div id="tagResol"></div></td>
+				<td><div class="ParamName">Max FPS</div></td>
+				<td><div id="tagMaxFPS"></div></td>
+			</tr>
+			<tr>
+				<td><div class="ParamName">Quality</div></td>
+				<td colspan="3"><div id="tagQuality"></div></td>
+			</tr>
+			<tr>
+				<td><div class="ParamName">Multicast</div></td>
+				<td colspan="3">
+					<button id="btnCtrlMulticast">Enable</button>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="4">
+					<applet id="MulticastViewer" code="MulticastViewer" archive="MulticastViewer.2.jar" width="640" height="480">
+						<param name="DeviceID" value="225">
+						<param name="Port" value="9527">
+					</applet>
+				</td>
+			</tr>
+		</table>
+	</div>
+	</div>
+	
+	</body>
+</html>

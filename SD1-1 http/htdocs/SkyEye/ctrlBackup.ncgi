@@ -1,0 +1,106 @@
+#!/bin/sh
+
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+
+#if [ ! "$REQUEST_METHOD" == "POST" ]; then exit 1; fi
+
+BackupFw=/tmp/backup
+LockFile=/tmp/skyeye.lock
+RetCode=1
+
+echo "Content-type: application/json"
+echo ""
+
+mkdir -p $BackupFw
+
+if [ ! -f "$LockFile" ]; then
+
+	echo "0" > $LockFile
+
+   if [ ! -f "/mnt/nand1-1/conprog.bin" ]; then
+#========================== SPI ==========================
+	UD=`df | grep -r $BackupFw | awk '{print $6}'`
+	if [ "$UD" == "$BackupFw" ]; then 
+		/bin/umount  $BackupFw	
+	else
+		if [ -d $BackupFw ]; then rm -rf $BackupFw; fi
+		mkdir -p $BackupFw
+	fi
+
+#	/usr/sbin/flash_eraseall -j /dev/mtd6 > /dev/null
+#	if [ $? == 0 ]; then
+#	       	/bin/mount -t jffs2 /dev/mtdblock3 $BackupFw
+#	       	if [ $? == 0 ]; then
+
+	RetCode=90
+	KernelVersion=`grep 2.6.17.14 /proc/version`
+
+	if [ "$KernelVersion" != "" ] ; then
+
+		/usr/mtdtool backup $BackupFw/SkyEye.fw \
+				-m 262144 	\
+				-m 2883584 	\
+				-m /dev/mtd5
+		RetCode=$?
+
+	else
+		KernelVersion=`grep 2.6.35.4 /proc/version`
+		
+		if [ "$KernelVersion" != "" ] ; then
+		
+			/usr/mtdtool backup $BackupFw/SkyEye.fw \
+				-m 262144       \
+				-m 2883584      \
+				-m /dev/mtd2
+			RetCode=$?
+			
+		fi
+	fi
+
+#		fi
+#	fi
+  else
+#========================== NAND ==========================
+	# Not support
+	RetCode=90
+#==========================================================
+  fi
+
+else
+	RetCode=99	
+fi
+
+case $RetCode in
+0)
+	sync
+	
+	if [ -f "/mnt/skyeye/htdocs/SkyEye.fw" ] ; then
+		rm /mnt/skyeye/htdocs/SkyEye.fw
+	fi
+	
+	ln -s $BackupFw/SkyEye.fw /mnt/skyeye/htdocs/SkyEye.fw
+	
+cat << EOF
+	{ "ret": "success", "link": "/SkyEye.fw" }
+EOF
+	if [ -f "$LockFile" ]; then rm -f $LockFile; fi
+	;;
+99)
+cat << EOF
+    { "ret": "Firmware update or backup is in progress. Please try to re-connect later.", "link": "" }
+EOF
+	;;
+90)
+        if [ -f "$LockFile" ]; then rm -f $LockFile; fi
+cat << EOF
+    { "ret": "Current FW does not support backup function!", "link": "" }
+EOF
+        ;;
+*)
+        if [ -f "$LockFile" ]; then rm -f $LockFile; fi
+cat << EOF
+	{ "ret": "Failed to backup FW! Please try to re-connect later.", "link": "" }
+EOF
+	;;
+esac
+

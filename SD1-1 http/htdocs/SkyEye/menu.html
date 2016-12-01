@@ -1,0 +1,208 @@
+<!--Force IE6 into quirks mode with this comment tag-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+	<head>
+		<title>Nuvoton SkyEye Demo</title>
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link rel="stylesheet" type="text/css" href="css-frames-style.css" />
+		<!--For versions below Internet Explorer 7-->
+		<!--[if lt IE 7]>
+		<link rel="stylesheet" href="css-frames-style-unreal.css" type="text/css">
+		<![endif]-->
+	
+		<script type="text/javascript">
+		//<![CDATA[
+		function viewerauto_detect()
+		{
+			$("#server_viewer").prop("src", "server_av_java.html");
+			$("#viewer").val("av_java_html");
+		}
+		
+		$.extend({
+			getUrlVars: function(){
+				var vars = [], hash;
+				var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+				for(var i = 0; i < hashes.length; i++)
+				{
+					hash = hashes[i].split('=');
+					vars.push(hash[0]);
+					vars[hash[0]] = hash[1];
+				}
+				return vars;
+			},
+			getUrlVar: function(name){
+				return $.getUrlVars()[name];
+			}
+		});
+		
+		function changeView(event)
+		{
+			$("#trViewer").hide();
+			$("#trRecorder").hide();
+			$("#server_viewer").prop("src", event.data.newSrc);
+			
+			curFocus.removeClass("focus");
+			curFocus = $(event.target);
+			curFocus.addClass("focus");
+		}
+		
+		function reinitIFrame(varTargetFrame){
+			var innerDoc = (varTargetFrame.get(0).contentDocument) ? varTargetFrame.get(0).contentDocument.documentElement : varTargetFrame.get(0).contentWindow.document.body;
+			
+			if(innerDoc)
+			{
+				varTargetFrame.width(innerDoc.scrollWidth);
+				varTargetFrame.height(innerDoc.scrollHeight);
+			}
+			
+			setTimeout(
+				function(){
+					reinitIFrame(varTargetFrame);
+				}, 
+				3000
+			);
+		}
+		
+		verifiedUser = verifyUser();
+		
+		if(verifiedUser == "")
+			window.top.location.href = "/";
+		
+		$(document).ready(function(e){
+			_setBrowser();
+			
+			if(verifiedUser == "view")
+			{
+				$("#network_config").hide();
+				$("#firmware_update").hide();
+				$("#alarm_config").hide();
+				$("#server_config").hide();
+			}
+			
+			$("#rtmp_view").hide();
+			
+			if($.browser.mobile)
+			{
+				$("#rtsp_view").hide();
+			}
+			else
+			{
+				$.get("/SkyEye/checkFileExist.ncgi?filePath=/mnt/skyeye/etc/crtmpserver.lua", function(data){
+					if(data.value > 0)
+						$("#rtmp_view").show();
+				});
+			}
+			
+			$("#multicast_view").hide();
+			
+			$.get("./ctrlIPChk.ncgi", function(data){
+				if(data == 1)
+					$("#multicast_view").show();
+			});
+			
+			curFocus = $("#single_stream");	
+			
+			if($.browser.mobile)
+				window.location.href = "menu_dual_stream.html";
+			
+			viewerauto_detect();
+			
+			$("#viewer").change(function(){
+				switch($("#viewer").val())
+				{
+				case "av_java_html":
+					$("#server_viewer").prop("src", "server_av_java.html");
+					$("#trRecorder").show();
+					break;
+				case "disable":
+					$("#server_viewer").prop("src", "");
+					$("#trRecorder").hide();
+					break;
+				default:
+					viewerauto_detect();
+					break;
+				}
+			});
+			
+			$("#rtsp_view").click({newSrc: "server_rtsp.html"}, changeView);
+			$("#rtmp_view").click({newSrc: "server_rtmp.html"}, changeView);
+			$("#network_config").click({newSrc: "confirmScanWifi.ncgi"}, changeView);
+			$("#firmware_update").click({newSrc: "server_file.html"}, changeView);
+			$("#alarm_config").click({newSrc: "server_alarm_config.html"}, changeView);
+			$("#server_config").click({newSrc: "server_config.html"}, changeView);
+			$("#about_skyeye").click({newSrc: "/version.txt"}, changeView);
+			
+			$("#server_viewer").load(
+				function(){
+					reinitIFrame($("#server_viewer"));
+				}
+			);
+		});
+		//]]>
+		</script>
+	
+	</head>
+	<body>
+	
+	<div id="framecontent">
+	<div class="innertube">
+	
+		<table>
+			<tr><td><a id="single_stream" href="menu.html" class="focus">[Merged A/V Stream]</a></td></td></tr>
+			<tr id="trViewer">
+				<td>
+					Viewer-<br>
+					<select id="viewer">
+					<option value="av_java_html">MJPG/MP3 stream-JAVA</option>
+					<option value="auto_detect" selected>Auto-Detect</option>
+					<option value="disable">Disabled</option>
+					</select>
+				</td>
+			</tr>
+			<tr><td><a id="dual_stream" href="menu_dual_stream.html">[Separate A/V Stream]</a></td></tr>
+			<tr><td><a id="rtsp_view" href="#">[RTSP Viewer]</a></td></tr>
+			<tr><td><a id="rtmp_view" href="#">[RTMP Viewer]</a></td></tr>
+			<tr><td><a id="network_config" href="#">[Network Config]</a></td></tr>
+			<tr><td><a id="alarm_config" href="#">[Alarm Config]</a></td></tr>
+			<tr><td><a id="server_config" href="#">[Server Config]</a></td></tr>
+			<tr><td><a id="firmware_update" href="#">[Firmware Update]</a></td></tr>
+			<tr><td><a id="multicast_view" href="menu_multicast.html">[Multicast View]</a></td></tr>
+			<tr><td><a id="about_skyeye" href="#">[About SkyEye]</a></td></tr>
+			<tr>
+				<td>
+					<hr>
+					<a href="http://www.nuvoton.com" target="_blank"><img src="../img/nuvoton.png" style="border:none;" /></a>
+					<a href="/">.</a>
+				</td>
+			</tr>
+		</table>
+	
+	</div>
+	</div>
+	
+	<div id="maincontent">
+	<div class="innertube">
+		<table>
+			<tr>
+				<td><iframe id="server_viewer" name="server_viewer" frameborder="0" width="640" height="480">Your browser does not support iframe tag.</iframe></td>
+			</tr>
+			<tr id="trRecorder">
+				<td>
+					<applet id="recorder" code="Recorder" archive="Recorder.2.jar" width="320" height="60">
+						<param name="BufByteSize" value="2048" />
+						<param name="RecURL" value="/audio.input" />
+						<param name="cache_option" VALUE="no" />
+					</applet>
+				</td>
+			</tr>
+		</table>
+	</div>
+	</div>
+	
+	
+	</body>
+</html>

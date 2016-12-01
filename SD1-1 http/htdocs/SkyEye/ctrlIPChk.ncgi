@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+
+echo "Content-type: text/plain"
+echo ""
+
+# Return code, 1: Equal, 0:not equal, other: fail.
+/mnt/skyeye/bin/ipchk	-r	$REMOTE_ADDR
+ret=$?
+echo $ret

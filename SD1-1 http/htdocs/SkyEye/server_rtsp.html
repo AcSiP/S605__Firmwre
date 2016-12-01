@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<title>Nuvoton SkyEye RTSP Viewer</title>
+		<link rel="icon" type="image/x-ico" href="../img/nuvoton.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="../img/nuvoton.ico" />
+		<link type="text/css" href="css-frames-style.css" rel="stylesheet" />
+		<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+		<script type="text/javascript" src="js/nuvoton.js"></script>
+		<script type="text/javascript" src="js/videoParam.js"></script>
+
+		<script type="text/javascript">
+		//<![CDATA[
+			var	varViewPipe		= 0,
+				varViewType		= "jpeg";
+			var varRTSPIntPort	= 554,
+				varRTSPExtPort	= 554;
+			var varRTSPPort		= varRTSPIntPort;
+			var checkRecordStatusTimer	= 0;
+			var eVideoType = { JPEG: 0, H264: 1 };
+			
+			$.ajaxSetup({
+				type: "POST",
+				headers: { "cache-control": "no-cache" }
+			});
+			
+			$.ajaxSetup({
+				type: "GET",
+				headers: { "cache-control": "no-cache" }
+			});
+			
+			function readH264Attr()
+			{
+				$.get("/server.command?command=get_enc_quality&type=h264&pipe=" + varViewPipe)
+				.done(function(data){
+					if(data.value != null && data.value == 0)
+					{
+						$.get("/server.command?command=get_enc_bitrate&type=h264&pipe=" + varViewPipe)
+						.done(function(data){
+							if(data.value != null && data.value > 0)
+							{
+								$("#h264_bitrate").val(data.value);
+								$("#h264_bitrate").prop("disabled", false);
+							}
+							else
+							{
+								$("#h264_bitrate").prop("disabled", true);
+							}
+						})
+						.fail(function(){
+							console.log("Failed to get H264 bit rate");
+							$("#h264_bitrate").prop("disabled", true);
+						});
+					}
+				});
+				
+				$.get("server.command?command=get_enc_gop&type=h264&pipe=" + varViewPipe)
+				.done(function(data){
+					if(data.value != null && data.value >= 0)
+					{
+						$("#h264_gop").val(data.value);
+						$("#h264_gop").prop("disabled", false);
+					}
+					else
+					{
+						$("#h264_gop").prop("disabled", true);
+					}
+				})
+				.fail(function(){
+					console.log("Failed to get H264 GOP");
+					$("#h264_gop").prop("disabled", true);
+				});
+			}
+			
+			function createPluginStr(src, width, height, ie)
+			{
+				var tag = document.getElementById("vlcTag");
+				var PluginStr = '<embed type="application/x-vlc-plugin" width="' + width + '" height="' + height + '" target="' + src + '"/>';
+				
+				if(ie == true)
+				{
+					CreateControl("vlcTag", src, width, height);
+				}
+				else	
+					$("#vlcTag").html(PluginStr);
+									
+				return PluginStr;
+			}
+			
+			function setStreamType(pipe_id)
+			{
+				if($("input:radio[name=StreamType]:checked").val() == eVideoType.H264)
+				{
+					if(pipe_id == undefined)
+					{
+						if(queryPipeCnt("pipe_cnt", "h264") > 0)
+							varViewPipe = 0;
+						else
+						{
+							$("#radio_stream_mjpg").prop("checked", true);
+							alert("Not support stream type!");
+							return false;
+						}
+					}
+					
+					varViewType = "h264";
+					url = "rtsp://" + window.location.hostname + ":" + varRTSPIntPort + "/cam1/h264";
+					readH264Attr();
+				}
+				else
+				{
+					if(pipe_id == undefined)
+					{
+						if(queryPipeCnt("pipe_cnt", "jpeg") > 0)
+							varViewPipe = 0;
+						else
+						{
+							$("#radio_stream_h264").prop("checked", true);
+							alert("Not support stream type!");
+							return false;
+						}
+					}
+
+					varViewType = "jpeg";
+					url = "rtsp://" + window.location.hostname + ":" + varRTSPIntPort + "/cam1/mpeg4";
+					$("#h264_bitrate").prop("disabled", true);
+					$("#h264_gop").prop("disabled", true);
+				}
+				
+				if(pipe_id != "" && pipe_id > 0)
+					url += "-" + pipe_id;
+				
+				CreateVideoParam("tagResol", "tagQuality", "tagMaxFPS", varViewType, varViewPipe);
+				createPluginStr(url, getVideoResol(eResol.Width), getVideoResol(eResol.Height), $.browser.msie);
+			}
+			
+			$.extend({
+				getUrlVars: function(){
+					var vars = [], hash;
+					var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+					for(var i = 0; i < hashes.length; i++)
+					{
+						hash = hashes[i].split('=');
+						vars.push(hash[0]);
+						vars[hash[0]] = hash[1];
+					}
+					return vars;
+				},
+				getUrlVar: function(name){
+					return $.getUrlVars()[name];
+				}
+			});
+			
+			$.ajax({
+				url: "param.cgi",
+				type: "GET",
+				async: false,
+				data: {
+					action: "list",
+					group: "puncher"
+				},
+				dataType: "json",
+				error: function(xhr) {
+					$("#Info-Dialog").html("Failed to read parameters! Please try to refresh page later.");
+				},
+				success: function(data) {
+					console.log("InternalPort_1: " + data.InternalPort_1);
+					varRTSPIntPort = data.InternalPort_1;
+					varRTSPExtPort = data.ExternalPort_1;
+					
+					if(data.InternalPort_1 == 0 || data.ExternalPort_1 == 0)
+					{
+						varRTSPIntPort = 554;
+						varRTSPExtPort = 554;
+						alert("Failed to retrieve RTSP port information!\nTry to use default port 554 instead.");
+					}
+				}
+			});
+			
+			$.get("./ctrlIPChk.ncgi", function(data){
+				if(data == 0)
+					varRTSPPort = varRTSPExtPort;
+			});
+			
+			function checkRecordStatus()
+			{
+				$.get("/server.command?command=check_storage", function(data)
+				{
+					if(data.value == "0")
+					{
+						$("#btnRecordPipe").text("No storage");
+						$("#btnRecordPipe").show();
+						$("#btnRecordPipe").prop("disabled", true);
+						
+						checkRecordStatusTimer = setTimeout("checkRecordStatus()", 5000);
+					}
+					else
+					{
+						$.get("/server.command?command=is_pipe_record&type=" + varViewType + "&pipe=" + varViewPipe)
+						.done(function(data){
+							if(data.value < 0)
+								console.log("Failed to start record because of " + data.value);
+							else
+							{
+								switch(data.value)
+								{
+									case "1":
+										$("#btnRecordPipe").text("Stop.Record");
+										$("#btnRecordPipe").prop("disabled", false);
+										break;
+									case "2":
+										$("#btnRecordPipe").text("Not available");
+										$("#btnRecordPipe").prop("disabled", true);
+										break;
+									default:
+										$("#btnRecordPipe").text("Start.Record");
+										$("#btnRecordPipe").prop("disabled", false);
+										break;
+								}
+							}
+							
+							checkRecordStatusTimer = setTimeout("checkRecordStatus()", 5000);
+						})
+						.fail(function(){
+							$("#btnRecordPipe").prop("disabled", true);
+						});
+					}
+				});
+			}
+			
+			$(document).ready(function(e){
+				_setBrowser();
+				
+				$("#radio_stream_mjpg, #radio_stream_h264").click(function(){ setStreamType(); });
+				
+				if(queryPipeCnt("pipe_cnt", "h264") > 0)
+				{
+					$("#radio_stream_h264").prop("checked", true);
+					$("#radio_stream_h264").trigger("click");
+				}
+				else
+				{
+					$("#radio_stream_mjpg").prop("checked", true);
+					$("#radio_stream_mjpg").trigger("click");
+				}
+				
+				CreateVideoParam("tagResol", "tagQuality", "tagMaxFPS", varViewType, varViewPipe);
+				CreateVideoExt(null, "tagVideoCtrl", "tagRecFileList", varViewType, varViewPipe);
+				
+				
+				$("#pipe_cnt").change(function(){
+					varViewPipe = $("#pipe_id").val();
+					setStreamType(varViewPipe);
+				});
+				checkRecordStatus();
+				
+				$("#h264_bitrate").change(function(){
+					$.get("/server.command?command=set_enc_bitrate&type=h264&value=" + $("#h264_bitrate").val() + "&pipe=" + varViewPipe);
+				});
+				
+				$("#h264_gop").change(function(){
+					$.get("/server.command?command=set_enc_gop&type=h264&value=" + $("#h264_gop").val() + "&pipe=" + varViewPipe);
+				});
+				
+				$("#btnRecordPipe").click(function()
+				{
+					if($("#btnRecordPipe").text() == "No storage")
+					{
+						if(confirm("Please insert SD card or USB disk to SkyEye first!\nIs SD card or USB disk inserted?"))
+						{
+							window.location.reload();
+						}
+						else
+							return ;
+					}
+					
+					if($("#btnRecordPipe").text() == "Start.Record")
+					{
+						$.get("/server.command?command=start_record_pipe&type=" + varViewType + "&pipe=" + varViewPipe, function(data)
+						{
+							$("#btnRecordPipe").prop("disabled", true);
+						})
+						.done(function(data)
+						{
+							if(data.value >= 0)
+								$("#btnRecordPipe").text("Stop.Record");
+							else
+							{
+								alert("Failed to record because of error code [" + data.value + "]!");
+								
+								$.get("/server.command?command=is_pipe_record&type=" + varViewType + "&pipe=" + varViewPipe)
+								.done(function(data)
+								{
+									console.log("Return code: " + data.value);
+								});
+							}
+							
+							$("#btnRecordPipe").prop("disabled", false);
+						});
+					}
+					else
+					{
+						$.get("/server.command?command=stop_record&type=" + varViewType + "&pipe=" + varViewPipe, function(data)
+						{
+							$("#btnRecordPipe").prop("disabled", true);
+						})
+						.done(function(data)
+						{
+							$("#btnRecordPipe").text("Start.Record");
+							$("#btnRecordPipe").prop("disabled", false);
+						});
+					}
+				});
+			});
+
+		//]]>
+		</script>
+	</head>
+
+	<body>
+		<div id="Info-Dialog"></div>
+		<table>
+			<tr>
+				<td><div class="ParamName">Stream Type</div></td>
+				<td>
+					<input type="radio" id="radio_stream_mjpg" name="StreamType" value="0">MJPG
+					<input type="radio" id="radio_stream_h264" name="StreamType" value="1" checked>H264
+					<span id="pipe_cnt"></span>
+				</td>
+				<td colspan="2">
+					<button id="btnRecordPipe">Start.Record</button>
+				</td>
+			</tr>
+			<tr>
+				<td><div class="ParamName">Resolution</div></td>
+				<td><div id="tagResol"></div></td>
+				<td>
+					<span class="ParamName">Max FPS</span>
+					<span id="tagMaxFPS"></span>
+				</td>
+				<td>
+					<span class="ParamName">GOP</span>
+					<select id="h264_gop">
+						<script type="text/javascript">
+							for(i = 0; i <= 100; i += 1)
+								document.write("<option value=\"" + i + "\">" + i + "</option>");
+						</script>
+					</select>
+				</td>
+			</tr>
+			<tr>
+			</tr>
+			<tr>
+				<td colspan="2">
+					<span class="ParamName">Bitrate</span>
+					<select id="h264_bitrate">
+						<script type="text/javascript">
+							for(i = 256; i <= 4096; i += 256)
+								document.write("<option value=\"" + i + "\">" + i + "Kbps</option>");
+						</script>
+					</select>
+					<span class="ParamName">Quality</span>
+					<span id="tagQuality"></span>
+				</td>
+				<td><span id="tagVideoCtrl"></span></td>
+				<td><span id="tagRecFileList"></span></td>
+			</tr>
+		</table>
+		<hr>
+		<table>
+			<tr>
+				<td>
+					<iframe id="video_ctrl" frameborder="0" width="0" height="0">Your browser does not support iframe tag.</iframe>
+				</td>
+				<td>
+					<div id="vlcTag"></div>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2">
+					If player is not shown, please download <a href="http://www.videolan.org/vlc/download-windows.html">VLC media player</a> first.
+				</td>
+			</tr>
+		</table>
+		<hr>
+	</body>
+</html>

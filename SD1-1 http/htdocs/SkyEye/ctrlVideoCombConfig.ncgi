@@ -1,0 +1,225 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# Read/Write server parameters
+
+eval `/mnt/skyeye/htdocs/proccgi.sh $*`
+
+cfgVideoCombConfPath="/mnt/skyeye/etc/plugin/video_in.conf"
+
+echo "Content-type: application/json"
+echo ""
+
+RET_CODE=0
+varSet0_OptName="Pipe_0_2_Combine"
+varSet0_Opt=`awk -F"[=#]" '/^'$varSet0_OptName'/{ print $2}' $cfgVideoCombConfPath`
+varSet1_OptName="Pipe_1_3_Combine"
+varSet1_Opt=`awk -F"[=#]" '/^'$varSet1_OptName'/{ print $2}' $cfgVideoCombConfPath`
+
+if [ "$FORM_doAction" == "read" ] ; then
+	varSet0_Enabled="0"
+	varSet0_Comb_Opt="0"
+	varSet0_Comp_Opt="0"
+	varSet0_PIP_X_Pos="0"
+	varSet0_PIP_Y_Pos="0"
+	varPipe0_Resol="0"
+	varPipe2_Resol="0"
+	varSet1_Enabled="0"
+	varSet1_Comb_Opt="0"
+	varSet1_Comp_Opt="0"
+	varSet1_PIP_X_Pos="0"
+	varSet1_PIP_Y_Pos="0"
+	
+	varPipe0_Resol=`awk -F"[=#:]" '/^Pipe0_Resolution=0:/{ print $3 }' "$cfgVideoCombConfPath"`
+	varPipe2_Resol=`awk -F"[=#:]" '/^Pipe2_Resolution=2:/{ print $3 }' "$cfgVideoCombConfPath"`
+	varPipe1_Resol=`awk -F"[=#:]" '/^Pipe1_Resolution=1:/{ print $3 }' "$cfgVideoCombConfPath"`
+	varPipe3_Resol=`awk -F"[=#:]" '/^Pipe3_Resolution=3:/{ print $3 }' "$cfgVideoCombConfPath"`
+	
+	if [ "$varSet0_Opt" != "" ] ; then
+		varSet0_Enabled="1"
+		varSet0_Comb_Opt=`echo $varSet0_Opt | awk -F: '{print $3}'`
+		varSet0_Extra_Opt=`echo $varSet0_Opt | awk -F: '{print $4}'`
+		
+		if [ "$varSet0_Comb_Opt" == "0" ] ; then
+			varSet0_Comp_Opt=$varSet0_Extra_Opt
+		else
+			varSet0_PIP_X_Pos=`echo $varSet0_Extra_Opt | awk -Fx '{print $1}'`
+			varSet0_PIP_Y_Pos=`echo $varSet0_Extra_Opt | awk -Fx '{print $2}'`
+		fi
+	else
+		varSet0_Enabled="-1"
+	fi
+	
+	if [ "$varSet1_Opt" != "" ] ; then
+		varSet1_Enabled="1"
+		varSet1_Comb_Opt=`echo $varSet1_Opt | awk -F: '{print $3}'`
+		varSet1_Extra_Opt=`echo $varSet1_Opt | awk -F: '{print $4}'`
+		
+		if [ "$varSet1_Comb_Opt" == "0" ] ; then
+			varSet1_Comp_Opt=$varSet1_Extra_Opt
+		else
+			varSet1_PIP_X_Pos=`echo $varSet1_Extra_Opt | awk -Fx '{print $1}'`
+			varSet1_PIP_Y_Pos=`echo $varSet1_Extra_Opt | awk -Fx '{print $2}'`
+		fi
+	else
+		varSet1_Enabled="-1"
+	fi
+	
+cat << EOF
+	{
+		"Set0_Enabled": "$varSet0_Enabled",
+		"Set0_Comb_Opt": "$varSet0_Comb_Opt",
+		"Set0_Comp_Opt": "$varSet0_Comp_Opt",
+		"Set0_PIP_X_Pos": "$varSet0_PIP_X_Pos",
+		"Set0_PIP_Y_Pos": "$varSet0_PIP_Y_Pos",
+		"Pipe0_Resol": "$varPipe0_Resol",
+		"Pipe2_Resol": "$varPipe2_Resol",
+		"Set1_Enabled": "$varSet1_Enabled",
+		"Set1_Comb_Opt": "$varSet1_Comb_Opt",
+		"Set1_Comp_Opt": "$varSet1_Comp_Opt",
+		"Set1_PIP_X_Pos": "$varSet1_PIP_X_Pos",
+		"Set1_PIP_Y_Pos": "$varSet1_PIP_Y_Pos",
+		"Pipe1_Resol": "$varPipe1_Resol",
+		"Pipe3_Resol": "$varPipe3_Resol"
+	}
+EOF
+
+else
+	varNeedBufSize=0
+	varNeedBufCnt=0
+	
+	if [ "$FORM_Set0_Enabled" == "1" ] ; then
+		varSet0_Opt="0:2:"$FORM_Set0_Comb_Opt":"
+		
+		if [ $FORM_Set0_Comb_Opt == "0" ] ; then
+			varSet0_Opt=$varSet0_Opt$FORM_Set0_Comp_Opt
+		else
+			varSet0_Opt=$varSet0_Opt$FORM_Set0_PIP_X_Pos"x"$FORM_Set0_PIP_Y_Pos
+		fi
+		
+		varIsOptExist=`grep $varSet0_OptName $cfgVideoCombConfPath`
+
+		if [ "$varIsOptExist" != "" ] ; then
+			ORIG_PARAM_VALUE=`awk -F"[=#]" '/^'$varSet0_OptName'/{ print $2 }' "$cfgVideoCombConfPath"`
+			
+			if [ "$ORIG_PARAM_VALUE" == "" ] ; then
+				sed -i "s|[# ]*$varSet0_OptName=[0-9:x]*|$varSet0_OptName=$varSet0_Opt|" "$cfgVideoCombConfPath"
+			else
+				if [ "$ORIG_PARAM_VALUE" != "$varSet0_Opt" ] ; then
+					sed -i "/$varSet0_OptName/s|$ORIG_PARAM_VALUE|$varSet0_Opt|" "$cfgVideoCombConfPath"
+				fi
+			fi
+			
+			if [ "$FORM_Pipe0_Resol" != "" ] ; then
+				sed -i "s|^Pipe0_Resolution=0:[0-9x]*|Pipe0_Resolution=0:$FORM_Pipe0_Resol|" "$cfgVideoCombConfPath"
+			fi
+			
+			if [ "FORM_Pipe2_Resol" != "" ] ; then
+				sed -i "s|^Pipe2_Resolution=2:[0-9x]*|Pipe2_Resolution=2:$FORM_Pipe2_Resol|" "$cfgVideoCombConfPath"
+			fi
+			
+			sed -i "s|^Pipe0_Color_Type=[0-9:]*|Pipe0_Color_Type=0:3|" "$cfgVideoCombConfPath"
+			sed -i "s|^Pipe2_Color_Type=[0-9:]*|Pipe2_Color_Type=2:3|" "$cfgVideoCombConfPath"
+			
+			varPipe2_Width=`awk -F"[=#:x]" '/^Pipe2_Resolution=2:/{ print $3 }' "$cfgVideoCombConfPath"`
+			
+			if [ "$FORM_Set0_Comb_Opt" == "0" ] ; then
+				# For Composite
+				# Applied width = Pipe0_Width + Pipe2_Width
+				varPipe0_Width=`awk -F"[=#:x]" '/^Pipe0_Resolution=0:/{ print $3 }' "$cfgVideoCombConfPath"`
+				varSet0_ApplyWidth=$(expr $varPipe0_Width + $varPipe2_Width)
+				# Applied height = Pipe0_Height
+				varSet0_ApplyHeight=`awk -F"[=#:x]" '/^Pipe0_Resolution=0:/{ print $4 }' "$cfgVideoCombConfPath"`
+			else
+				# For PIP, applied width and height is Pipe3_Width and Pipe3_Height
+				varSet0_ApplyWidth=$varPipe2_Width
+				varSet0_ApplyHeight=`awk -F"[=#:x]" '/^Pipe2_Resolution=2:/{ print $4 }' "$cfgVideoCombConfPath"`
+			fi
+			
+			varNeedBufSize=$(expr $varSet0_ApplyWidth \* $varSet0_ApplyHeight)
+			varNeedBufCnt=$(expr $varNeedBufCnt + 1)
+		else
+			RET_CODE=-1
+		fi
+	else
+		sed -i "s|^$varSet0_OptName|#$varSet0_OptName|" "$cfgVideoCombConfPath"
+	fi
+	
+	if [ "$FORM_Set1_Enabled" == "1" ] ; then
+		varSet1_Opt="1:3:"$FORM_Set1_Comb_Opt":"
+		
+		if [ "$FORM_Set1_Comb_Opt" == "0" ] ; then
+			varSet1_Opt=$varSet1_Opt$FORM_Set1_Comp_Opt
+		else
+			varSet1_Opt=$varSet1_Opt$FORM_Set1_PIP_X_Pos"x"$FORM_Set1_PIP_Y_Pos
+		fi
+		
+		varIsOptExist=`grep $varSet1_OptName $cfgVideoCombConfPath`
+
+		if [ "$varIsOptExist" != "" ] ; then
+			ORIG_PARAM_VALUE=`awk -F"[=#]" '/^'$varSet1_OptName'/{ print $2 }' "$cfgVideoCombConfPath"`
+			
+			if [ "$ORIG_PARAM_VALUE" == "" ] ; then
+				sed -i "s|[# ]*$varSet1_OptName=[0-9:x]*|$varSet1_OptName=$varSet1_Opt|" "$cfgVideoCombConfPath"
+			else
+				if [ "$ORIG_PARAM_VALUE" != "$varSet1_Opt" ] ; then
+					sed -i "/$varSet1_OptName/s|$ORIG_PARAM_VALUE|$varSet1_Opt|" "$cfgVideoCombConfPath"
+				fi
+			fi
+			
+			if [ "$FORM_Pipe1_Resol" != "" ] ; then
+				sed -i "s|^Pipe1_Resolution=1:[0-9x]*|Pipe1_Resolution=1:$FORM_Pipe1_Resol|" "$cfgVideoCombConfPath"
+			fi
+			
+			if [ "$FORM_Pipe3_Resol" != "" ] ; then
+				sed -i "s|^Pipe3_Resolution=3:[0-9x]*|Pipe3_Resolution=3:$FORM_Pipe3_Resol|" "$cfgVideoCombConfPath"
+			fi
+			sed -i "s|^Pipe1_Color_Type=[0-9:]*|Pipe1_Color_Type=1:1|" "$cfgVideoCombConfPath"
+			sed -i "s|^Pipe3_Color_Type=[0-9:]*|Pipe3_Color_Type=3:1|" "$cfgVideoCombConfPath"
+
+			varPipe3_Width=`awk -F"[=#:x]" '/^Pipe3_Resolution=3:/{ print $3 }' "$cfgVideoCombConfPath"`
+			
+			if [ "$FORM_Set1_Comb_Opt" == "0" ] ; then
+				# For Composite
+				# Applied width = Pipe1_Width + Pipe3_Width
+				varPipe1_Width=`awk -F"[=#:x]" '/^Pipe1_Resolution=1:/{ print $3 }' "$cfgVideoCombConfPath"`
+				varSet1_ApplyWidth=$(expr $varPipe1_Width + $varPipe3_Width)
+				# Applied height = Pipe1_Height
+				varSet1_ApplyHeight=`awk -F"[=#:x]" '/^Pipe1_Resolution=1:/{ print $4 }' "$cfgVideoCombConfPath"`
+			else
+				# For PIP, applied width and height is Pipe3_Width and Pipe3_Height
+				varSet1_ApplyWidth=$varPipe3_Width
+				varSet1_ApplyHeight=`awk -F"[=#:x]" '/^Pipe3_Resolution=3:/{ print $4 }' "$cfgVideoCombConfPath"`
+			fi
+			
+			varSet1_BufSize=$(expr $varSet1_ApplyWidth \* $varSet1_ApplyHeight)
+			
+			if [ $varNeedBufSize -lt $varSet1_BufSize ] ; then
+				varNeedBufSize=$varSet1_BufSize
+			fi
+			
+			varNeedBufCnt=$(expr $varNeedBufCnt + 1)
+		else
+			RET_CODE=-1
+		fi
+	else
+		sed -i "s|^$varSet1_OptName|#$varSet1_OptName|" "$cfgVideoCombConfPath"
+	fi
+	
+	BUF_SIZE=`awk -F"[=#:]" '/^Alloc_DMA_Buffer/{ print $2 }' "$cfgVideoCombConfPath"`
+	
+	if [ "$BUF_SIZE" != "" ]  ; then
+		sed -i "s|^Alloc_DMA_Buffer=[0-9:]*|Alloc_DMA_Buffer=$varNeedBufSize:$varNeedBufCnt|" "$cfgVideoCombConfPath"
+	fi
+	
+	sync
+	
+cat << EOF
+	{
+		"value": $RET_CODE,
+		"MSG": "Video combination options are saved."
+	}
+EOF
+	
+fi

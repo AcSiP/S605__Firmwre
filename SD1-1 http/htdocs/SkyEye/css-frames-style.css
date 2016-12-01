@@ -1,0 +1,70 @@
+body{
+	margin: 0;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	height: 100%; 
+	max-height: 100%; 
+}
+
+#framecontent{
+	position: absolute;
+	top: 0;
+	bottom: 0; 
+	left: 0;
+	width: 220px; /*Width of frame div*/
+	height: 100%;
+	overflow: hidden; /*Disable scrollbars. Set to "scroll" to enable*/
+	background: white;
+	color: black;
+	font-family: "Arial";
+}
+
+#maincontent{
+	position: fixed;
+	top: 0; 
+	left: 220px; /*Set left value to WidthOfFrameDiv*/
+	right: 0;
+	bottom: 0;
+	overflow: auto; 
+	background: #fff;
+}
+
+.innertube{
+	margin: 10px; /*Margins for inner DIV inside each DIV (to provide padding)*/
+}
+
+* html body{ /*IE6 hack*/
+	padding: 0 0 0 220px; /*Set value to (0 0 0 WidthOfFrameDiv)*/
+}
+
+* html #maincontent{ /*IE6 hack*/
+	height: 100%; 
+	width: 100%; 
+}
+
+#framecontent a{
+	text-decoration: none;
+}
+
+#framecontent a:hover{
+	color: white;
+	background: blue;
+}
+
+a.focus{
+	color: red;
+}
+
+.ParamName{
+	color: orange;
+	font-weight: bold;
+}
+
+.Comb1{
+	border: 2px solid blue;
+}
+
+.Comb2{
+	border: 2px solid red;
+}

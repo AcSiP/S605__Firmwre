@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Copyright (c) Nuvoton Technology Corp. All rights reserved.
+#
+# Read/Write server parameters
+
+eval `/mnt/skyeye/htdocs/proccgi.sh $*`
+
+cfgVideoCombConfPath="/mnt/skyeye/etc/plugin/video_in.conf"
+
+echo "Content-type: application/json"
+echo ""
+
+RET_VAL=0
+varVideo0_Resol=0
+varVideo1_Resol=0
+
+if [ "$FORM_type" == "h264" ] ; then
+	varSet0_OptName="Pipe_0_2_Combine"
+	varSet0_Opt=`awk -F"[=#]" '/^'$varSet0_OptName'/{ print $2}' $cfgVideoCombConfPath`
+	
+	if [ "$varSet0_Opt" != "" ] ; then
+		RET_VAL=1
+		varPipe0_Resol=`awk -F"[=#:]" '/^Pipe0_Resolution=0:/{ print $3 }' "$cfgVideoCombConfPath"`
+		varPipe2_Resol=`awk -F"[=#:]" '/^Pipe2_Resolution=2:/{ print $3 }' "$cfgVideoCombConfPath"`
+		varVideo0_Resol=$varPipe0_Resol
+		varVideo1_Resol=$varPipe2_Resol
+	fi
+fi
+
+if [ "$FORM_type" == "jpeg" ] ; then
+	varSet1_OptName="Pipe_1_3_Combine"
+	varSet1_Opt=`awk -F"[=#]" '/^'$varSet1_OptName'/{ print $2}' $cfgVideoCombConfPath`
+	
+	if [ "$varSet1_Opt" != "" ] ; then
+		RET_VAL=1
+		varPipe1_Resol=`awk -F"[=#:]" '/^Pipe1_Resolution=1:/{ print $3 }' "$cfgVideoCombConfPath"`
+		varPipe3_Resol=`awk -F"[=#:]" '/^Pipe3_Resolution=3:/{ print $3 }' "$cfgVideoCombConfPath"`
+		varVideo0_Resol=$varPipe1_Resol
+		varVideo1_Resol=$varPipe3_Resol
+	fi
+fi
+
+cat << EOF
+	{ "value": "$RET_VAL", "Video0_Resol": "$varVideo0_Resol", "Video1_Resol": "$varVideo1_Resol" }
+EOF

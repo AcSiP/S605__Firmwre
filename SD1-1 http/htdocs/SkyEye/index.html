@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta http-equiv="cache-control" content="no-cache">
+	<meta http-equiv="expires" content="0">
+	<title>Nuvoton SkyEye Authorization Page</title>
+	<link rel="icon" type="image/x-ico" href="../nuvoton.ico" />
+	<link rel="shortcut icon" type="image/x-icon" href="../nuvoton.ico" />
+	<script type="text/javascript" src="../jquery/js/jquery.min.js"></script>
+	<script type="text/javascript">
+		
+		$(function(){
+			$('#formLogin').submit(function() {
+				if($("input#UserID").val() == "") {
+					$("span.help").show();
+					$("input#UserID").focus();
+					
+					return false;
+				}
+				else if($("input#UserPassword").val() == ""){
+					$("span.help").show();
+					$("input#UserPassword").focus();
+					
+					return false;
+				}
+				else {
+					$("span.help").hide();
+					formLogin.submit();
+				}
+			});
+			
+		});
+	
+	</script>
+	<style type="text/css">
+		body{ font: 90% "Trebuchet MS", sans-serif; margin: 50px; }
+		.demoHeaders { margin-top: 2em; font-size: 12pt; }
+		.help { display: none; color: red; }
+	</style>	
+</head>
+	
+<body onload="$('#UserID').focus();">
+	<h1 style="color: #D11204" align="center"><img src="nuvoton_logo.gif" /> SkyEye</h1>
+	<form action="Login.ncgi" name="formLogin" id="formLogin" method="GET">
+		<table align="center">
+			<tr>
+				<td colspan="3"><hr></td>
+			</tr>
+			<tr>
+				<td><span class="demoHeaders">User ID</span></td>
+				<td>
+					<input type="text" id="UserID" name="UserID" style="width: 160px; position: relative" title="Please type your user ID" />
+				</td>
+				<td><span class="help">*Must</span></td>
+			</tr>
+			<tr>
+				<td><span class="demoHeaders">Password</span></td>
+				<td>
+					<input type="password" id="UserPassword" name="UserPassword" style="width: 160px; position: relative" title="Please type your user password" />
+				</td>
+				<td><span class="help">*Must</span></td>
+			</tr>
+			<tr>
+				<td colspan="3"><hr></td>
+			</tr>
+			<tr>
+				<td align="center" colspan="2">
+					<input type="submit" name="btnLogin" id="btnLogin" value="Login" />
+					<!--input type="reset" value="Reset" /-->
+				</td>
+				<td></td>
+			</tr>
+			<tr>
+				<td colspan="3"><hr></td>
+			</tr>
+		</table>
+	</form>
+	<h3 align="center">Please enter authorized infromation and click "Login" button to login</h3>
+</body>
+</html>
